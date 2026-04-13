@@ -2,7 +2,11 @@
 
 ## Grupo
 ### Integrantes
-* legajo - Apellido(s), Nombre(s)
+* 52167 – Pérez, Mauro
+* 50269 – Leandro Carrión Lescano
+* 52243 – Paz, José
+* 48170 – Natalicchio, Oriana
+
 
 ### Repositorios
 * [frontend app](http://hyperlinkToGihubOrGitlab)
@@ -11,7 +15,7 @@
 
 ## Tema
 ### Descripción
-*2 a 6 líneas describiendo el negocio (menos es más)*
+Sistema web orientado a la gestión de productos para mascotas, clientes y ventas. Permite administrar el stock, registrar compras asociadas a mascotas de los clientes y consultar historiales de consumo, mejorando la organización y control del negocio.
 
 ### Modelo
 ![imagen del modelo]()
@@ -22,22 +26,22 @@
 
 ### Alcance Mínimo
 
-*Nota*: el siguiente es un ejemplo para un grupo de 3 integrantes para un sistema de hotel. El 
-
 Regularidad:
 |Req|Detalle|
 |:-|:-|
-|CRUD simple|1. CRUD Tipo Habitacion<br>2. CRUD Servicio<br>3. CRUD Localidad|
-|CRUD dependiente|1. CRUD Habitación {depende de} CRUD Tipo Habitacion<br>2. CRUD Cliente {depende de} CRUD Localidad|
-|Listado<br>+<br>detalle| 1. Listado de habitaciones filtrado por tipo de habitación, muestra nro y tipo de habitación => detalle CRUD Habitacion<br> 2. Listado de reservas filtrado por rango de fecha, muestra nro de habitación, fecha inicio y fin estadía, estado y nombre del cliente => detalle muestra datos completos de la reserva y del cliente|
-|CUU/Epic|1. Reservar una habitación para la estadía<br>2. Realizar el check-in de una reserva|
+|CRUD simple|1. CRUD TipoCategoria<br>2. CRUD TipoMascota<br>3. CRUD MedioPago<br>4. CRUD Cliente|
+|CRUD dependiente|1. CRUD Producto {depende de} CRUD Categoría y CRUD TipoMascota<br>2. CRUD Mascota {depende de} CRUD Cliente<br>3. CRUD Venta {depende de} CRUD Cliente, CRUD Mascota y CRUD MedioPago<br>4. CRUD DetalleVenta {depende de} CRUD Venta y CRUD Producto|
+|Listado<br>+<br>detalle|1. Listado de productos filtrado por categoría o tipo de mascota, muestra nombre, precio y stock ⇒ detalle muestra información completa del producto<br>2. Listado de ventas filtrado por cliente o mascota, muestra fecha, cliente, mascota y total ⇒ detalle muestra información completa de la venta y productos asociados|
+|CUU/Epic|1. Registrar una venta de productos asociada a una mascota de un cliente<br>2. Actualizar automáticamente el stock de productos luego de una venta|
 
 
 Adicionales para Aprobación
 |Req|Detalle|
 |:-|:-|
-|CRUD |1. CRUD Tipo Habitacion<br>2. CRUD Servicio<br>3. CRUD Localidad<br>4. CRUD Provincia<br>5. CRUD Habitación<br>6. CRUD Empleado<br>7. CRUD Cliente|
-|CUU/Epic|1. Reservar una habitación para la estadía<br>2. Realizar el check-in de una reserva<br>3. Realizar el check-out y facturación de estadía y servicios|
+
+|CRUD |1. CRUD Categoria<br>2. CRUD TipoMascota<br>3. CRUD MedioPago<br>4. CRUD Producto<br>5. CRUD Cliente<br>6. CRUD Mascota<br>7. CRUD Venta<br>8. CRUD DetalleVenta|
+
+|CUU/Epic|1. Cancelar una venta registrada, actualizando su estado y restaurando el stock de los productos involucrados<br>2. Consultar historial de compras de un cliente o de una mascota|
 
 
 ### Alcance Adicional Voluntario
@@ -46,7 +50,10 @@ Adicionales para Aprobación
 
 |Req|Detalle|
 |:-|:-|
-|Listados |1. Estadía del día filtrado por fecha muestra, cliente, habitaciones y estado <br>2. Reservas filtradas por cliente muestra datos del cliente y de cada reserve fechas, estado cantidad de habitaciones y huespedes|
-|CUU/Epic|1. Consumir servicios<br>2. Cancelación de reserva|
-|Otros|1. Envío de recordatorio de reserva por email|
+
+|Listados |1. Listado de productos con stock por debajo del mínimo definido|
+
+|CUU/Epic|1. Consultar productos recomendados según el tipo de mascota|
+
+|Otros|1. Visualización de alertas de stock bajo en productos|
 
