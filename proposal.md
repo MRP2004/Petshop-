@@ -18,9 +18,7 @@
 Sistema web orientado a la gestión de productos para mascotas, clientes y ventas. Permite administrar el stock, registrar ventas asociadas opcionalmente a mascotas de los clientes y consultar historiales de consumo, mejorando la organización y control del negocio.
 
 ### Modelo
-![imagen del modelo]()
-
-*Nota*: incluir un link con la imagen de un modelo, puede ser modelo de dominio, diagrama de clases, DER. Si lo prefieren pueden utilizar diagramas con [Mermaid](https://mermaid.js.org) en lugar de imágenes.
+![Modelo de Dominio](https://acortar.link/3VJe85)
 
 ## Alcance Funcional 
 
