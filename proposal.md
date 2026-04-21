@@ -27,9 +27,9 @@ Sistema web orientado a la gestión de productos para mascotas, clientes y venta
 Regularidad:
 |Req|Detalle|
 |:-|:-|
-|CRUD simple|1. CRUD TipoCategoria<br>2. CRUD TipoMascota<br>3. CRUD MedioPago<br>4. CRUD Cliente|
+|CRUD simple|1. CRUD TipoCategoria<br>2. CRUD TipoMascota<br>3. CRUD MedioPago<br>4. CRUD Cliente<br>5. CRUD Proveedor|
 |CRUD dependiente|1. CRUD Producto {depende de} CRUD Categoría y CRUD TipoMascota<br>2. CRUD PromocionProducto {depende de} CRUD Producto y CRUD TipoCategoria|
-|Gestión|1. Registrar Venta {depende de} CRUD Cliente, CRUD MedioPago y CRUD Producto<br>&nbsp;&nbsp;&nbsp;- Incluye uno o varios Detalles de Venta, donde se especifican productos, cantidades, proveedores y precios unitarios|
+|Gestión|1. Registrar Venta {depende de} CRUD Cliente, CRUD MedioPago y CRUD Producto<br>&nbsp;&nbsp;&nbsp;- Incluye uno o varios Detalles de Venta, donde se especifican productos, cantidades y precios unitarios|
 |Listado<br>+<br>detalle|1. Listado de productos filtrado por categoría o tipo de mascota, muestra nombre, precio y stock ⇒ detalle muestra información completa del producto<br>2. Listado de ventas filtrado por cliente o proveedor, muestra fecha, cliente, proveedor y total ⇒ detalle muestra información completa de la venta y productos asociados|
 |CUU/Epic|1. Al Registrar una venta, el sistema debe verificar automaticamente si los productos agregados tienen una promocion vigente.<br>2. Actualizar automáticamente el stock de productos luego de una venta
 
@@ -37,7 +37,7 @@ Regularidad:
 Adicionales para Aprobación
 |Req|Detalle|
 |:-|:-|
-|Funcionalidades|1. Cancelar una venta registrada, actualizando su estado y restaurando el stock de los productos involucrados<br>2. Consultar historial de compras de un cliente<br>3. Consultar historial de compras de un proveedor|
+|Funcionalidades|1. Cancelar una venta registrada, actualizando su estado y restaurando el stock de los productos involucrados<br>2. Consultar historial de compras de un cliente<br>3. Consultar historial comercial de productos por proveedor|
 |CUU/Epic|1. Visualizar detalle completo de ventas con productos asociados<br>2. Validar stock disponible antes de confirmar una venta|
 
 
