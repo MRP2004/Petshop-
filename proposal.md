@@ -18,7 +18,8 @@
 Sistema web orientado a la gestión de productos para mascotas, clientes y ventas. Permite administrar el stock, registrar ventas asociadas opcionalmente a mascotas de los clientes y consultar historiales de consumo, mejorando la organización y control del negocio.
 
 ### Modelo
-![Modelo de Dominio](MD%20-%20PetShop.png)
+![Modelo de Dominio](docs/Pet-shop.drawio.png)
+
 
 ## Alcance Funcional 
 
