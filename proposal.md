@@ -15,7 +15,7 @@
 
 ## Tema
 ### Descripción
-Sistema web orientado a la gestión de productos para mascotas, clientes y ventas. Permite administrar el stock, registrar ventas asociadas opcionalmente a mascotas de los clientes y consultar historiales de consumo, mejorando la organización y control del negocio.
+Sistema web orientado a la gestión de productos para mascotas, clientes y ventas. Permite administrar el stock, registrar ventas y consultar historiales de consumo, mejorando la organización y control del negocio.
 
 ### Modelo
 ![Modelo de Dominio](docs/Pet-shop.drawio.png)
@@ -28,18 +28,17 @@ Sistema web orientado a la gestión de productos para mascotas, clientes y venta
 Regularidad:
 |Req|Detalle|
 |:-|:-|
-|CRUD simple|1. CRUD TipoCategoria<br>2. CRUD TipoMascota<br>3. CRUD MedioPago<br>4. CRUD Cliente<br>5. CRUD Proveedor|
+|CRUD simple|1. CRUD Cliente<br>2. CRUD Proveedor<br>3. CRUD Producto<br> 4. CRUD TipoMascota|
 |CRUD dependiente|1. CRUD Producto {depende de} CRUD Categoría y CRUD TipoMascota<br>2. CRUD PromocionProducto {depende de} CRUD Producto y CRUD TipoCategoria|
-|Gestión|1. Registrar Venta {depende de} CRUD Cliente, CRUD MedioPago y CRUD Producto<br>&nbsp;&nbsp;&nbsp;- Incluye uno o varios Detalles de Venta, donde se especifican productos, cantidades y precios unitarios|
 |Listado<br>+<br>detalle|1. Listado de productos filtrado por categoría o tipo de mascota, muestra nombre, precio y stock ⇒ detalle muestra información completa del producto<br>2. Listado de ventas filtrado por cliente o proveedor, muestra fecha, cliente, proveedor y total ⇒ detalle muestra información completa de la venta y productos asociados|
-|CUU/Epic|1. Al Registrar una venta, el sistema debe verificar automaticamente si los productos agregados tienen una promocion vigente.<br>2. Actualizar automáticamente el stock de productos luego de una venta
+|CUU/Epic|1. Registrar una venta.<br>2. Cancelar una venta.
 
 
 Adicionales para Aprobación
 |Req|Detalle|
 |:-|:-|
-|Funcionalidades|1. Cancelar una venta registrada, actualizando su estado y restaurando el stock de los productos involucrados<br>2. Consultar historial de compras de un cliente<br>3. Consultar historial comercial de productos por proveedor|
-|CUU/Epic|1. Visualizar detalle completo de ventas con productos asociados<br>2. Validar stock disponible antes de confirmar una venta|
+|CRUD|1. CRUD Cliente<br>2. CRUD Proveedor<br>3. CRUD Producto<br> 4. CRUD TipoMascota<br>5. CRUD Categoria<br>6. CRUD MedioPago<br>7. CRUD PromocionProducto<br> 8. CRUD Venta<br> 9. CRUD DetalleVenta|
+|CUU/Epic|1. Registrar una venta.<br>2. Cancelar una venta.<br>3. Realizar el cambio de estado del pedido una vez enviado.|
 
 
 ### Alcance Adicional Voluntario
@@ -50,4 +49,4 @@ Adicionales para Aprobación
 |:-|:-|
 |Listados |1. Listado de productos con stock por debajo del mínimo definido|
 |CUU/Epic|1. Consultar productos recomendados según el tipo de mascota|
-|Otros|1. Visualización de alertas de stock bajo en productos|
+|Otros|1. Visualización de alertas de stock bajo en productos. <br> 2. Enviar recordatorio de pedido no pagado luego de un determinado tiempo.|
