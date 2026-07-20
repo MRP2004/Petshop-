@@ -6,6 +6,7 @@ import './models/categoria.model.js';
 import './models/proveedor.model.js';
 import './models/producto.model.js';
 import './models/cliente.model.js';
+import './models/medioPago.model.js';
 
 const PORT = process.env.PORT || 3000;
 

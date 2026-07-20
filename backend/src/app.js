@@ -5,6 +5,7 @@ import categoriaRoutes from './routes/categoria.routes.js';
 import proveedorRoutes from './routes/proveedor.routes.js';
 import productoRoutes from './routes/producto.routes.js';
 import clienteRoutes from './routes/cliente.routes.js';
+import medioPagoRoutes from './routes/medioPago.routes.js';
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use('/api/categorias', categoriaRoutes);
 app.use('/api/proveedores', proveedorRoutes);
 app.use('/api/productos', productoRoutes);
 app.use('/api/clientes', clienteRoutes);
+app.use('/api/medios-pago', medioPagoRoutes);
 
 app.get('/api/health', (req, res) => {
   res.status(200).json({
