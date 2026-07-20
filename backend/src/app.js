@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import tipoMascotaRoutes from './routes/tipoMascota.routes.js';
 
 const app = express();
 
@@ -10,6 +11,8 @@ app.use(
 );
 
 app.use(express.json());
+
+app.use('/api/tipos-mascota', tipoMascotaRoutes);
 
 app.get('/api/health', (req, res) => {
   res.status(200).json({
@@ -25,10 +28,17 @@ app.use((req, res) => {
 });
 
 app.use((error, req, res, next) => {
-  console.error(error);
+  const statusCode = error.statusCode || 500;
 
-  res.status(500).json({
-    error: 'Error interno del servidor',
+  if (statusCode === 500) {
+    console.error(error);
+  }
+
+  res.status(statusCode).json({
+    error:
+      statusCode === 500
+        ? 'Error interno del servidor'
+        : error.message,
   });
 });
 
