@@ -3,6 +3,7 @@ import app from './app.js';
 import sequelize from './config/database.js';
 import './models/tipoMascota.model.js';
 import './models/categoria.model.js';
+import './models/proveedor.model.js';
 
 const PORT = process.env.PORT || 3000;
 
