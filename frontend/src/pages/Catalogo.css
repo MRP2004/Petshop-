@@ -1,0 +1,29 @@
+.catalogo__filtros {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.catalogo__busqueda-activa {
+  color: var(--color-texto-suave);
+  margin: -8px 0 16px;
+}
+
+.catalogo__grilla {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+
+@media (min-width: 768px) {
+  .catalogo__grilla {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .catalogo__grilla {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

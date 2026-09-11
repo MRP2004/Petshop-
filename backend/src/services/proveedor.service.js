@@ -1,36 +1,34 @@
 import Proveedor from '../models/proveedor.model.js';
 import AppError from '../errors/AppError.js';
+import {
+  MAXIMO_ENTERO_POSITIVO,
+  esObjetoPlano,
+  validarEnteroEnRango,
+  limpiarCadenaOpcional,
+} from '../utils/validacion.js';
 
-const validarId = (id) => {
-  const idProveedor = Number(id);
-
-  if (!Number.isInteger(idProveedor) || idProveedor <= 0) {
-    throw new AppError('El ID del proveedor no es válido', 400);
-  }
-
-  return idProveedor;
-};
-
-const limpiarCampoOpcional = (valor) => {
-  if (typeof valor !== 'string') {
-    return null;
-  }
-
-  const valorLimpio = valor.trim();
-
-  return valorLimpio || null;
-};
+const validarId = (id) =>
+  validarEnteroEnRango(
+    id,
+    1,
+    MAXIMO_ENTERO_POSITIVO,
+    'El ID del proveedor no es válido',
+  );
 
 const prepararDatos = (datos) => {
+  if (!esObjetoPlano(datos)) {
+    throw new AppError('El cuerpo del proveedor no es válido', 400);
+  }
+
   const descripcion =
     typeof datos.descripcion === 'string'
       ? datos.descripcion.trim()
       : '';
 
-  const direccion = limpiarCampoOpcional(datos.direccion);
-  const CUIT = limpiarCampoOpcional(datos.CUIT);
-  const telefono = limpiarCampoOpcional(datos.telefono);
-  const mail = limpiarCampoOpcional(datos.mail);
+  const direccion = limpiarCadenaOpcional(datos.direccion, 'La dirección');
+  const CUIT = limpiarCadenaOpcional(datos.CUIT, 'El CUIT');
+  const telefono = limpiarCadenaOpcional(datos.telefono, 'El teléfono');
+  const mail = limpiarCadenaOpcional(datos.mail, 'El correo electrónico');
 
   if (descripcion.length < 2 || descripcion.length > 100) {
     throw new AppError(
@@ -106,8 +104,8 @@ const crearProveedor = async (datos) => {
 };
 
 const actualizarProveedor = async (id, datos) => {
-  const proveedor = await obtenerProveedorPorId(id);
   const datosPreparados = prepararDatos(datos);
+  const proveedor = await obtenerProveedorPorId(id);
 
   await proveedor.update(datosPreparados);
 

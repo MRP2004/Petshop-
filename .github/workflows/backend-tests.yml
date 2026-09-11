@@ -40,3 +40,11 @@ jobs:
 
       - name: Ejecutar pruebas
         run: npm test
+        env:
+          # Ninguna prueba de esta suite toca MySQL real (ver
+          # docs/backend-pruebas.md), así que no hace falta configurar
+          # DB_*; pero sí se firman/verifican JWT de prueba (ver
+          # test/ayudaAutenticacion.js), y eso requiere JWT_SECRET seteado.
+          # Este valor es exclusivo de CI, no se reutiliza en ningún
+          # ambiente real.
+          JWT_SECRET: ci-unicamente-no-es-un-secreto-real-0000000000

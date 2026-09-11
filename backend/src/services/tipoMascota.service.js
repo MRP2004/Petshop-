@@ -1,24 +1,32 @@
 import TipoMascota from '../models/tipoMascota.model.js';
 import AppError from '../errors/AppError.js';
+import {
+  MAXIMO_ENTERO_POSITIVO,
+  esObjetoPlano,
+  validarEnteroEnRango,
+  limpiarCadenaOpcional,
+} from '../utils/validacion.js';
 
-const validarId = (id) => {
-  const idNumerico = Number(id);
-
-  if (!Number.isInteger(idNumerico) || idNumerico <= 0) {
-    throw new AppError('El ID debe ser un número entero positivo', 400);
-  }
-
-  return idNumerico;
-};
+const validarId = (id) =>
+  validarEnteroEnRango(
+    id,
+    1,
+    MAXIMO_ENTERO_POSITIVO,
+    'El ID debe ser un número entero positivo',
+  );
 
 const validarDatos = (datos) => {
+  if (!esObjetoPlano(datos)) {
+    throw new AppError('El cuerpo del tipo de mascota no es válido', 400);
+  }
+
   const nombre =
     typeof datos.nombre === 'string' ? datos.nombre.trim() : '';
 
-  const descripcion =
-    typeof datos.descripcion === 'string'
-      ? datos.descripcion.trim()
-      : null;
+  const descripcion = limpiarCadenaOpcional(
+    datos.descripcion,
+    'La descripción',
+  );
 
   if (nombre.length < 2 || nombre.length > 50) {
     throw new AppError(
@@ -64,8 +72,8 @@ export const crearTipoMascota = async (datos) => {
 };
 
 export const actualizarTipoMascota = async (id, datos) => {
-  const tipoMascota = await obtenerTipoMascotaPorId(id);
   const datosValidados = validarDatos(datos);
+  const tipoMascota = await obtenerTipoMascotaPorId(id);
 
   return tipoMascota.update(datosValidados);
 };

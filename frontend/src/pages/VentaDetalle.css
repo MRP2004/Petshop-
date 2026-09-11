@@ -1,0 +1,48 @@
+.venta-detalle__confirmacion {
+  background: #d3f9d8;
+  color: #2b8a3e;
+  padding: 12px 16px;
+  border-radius: var(--radio-borde);
+  font-weight: 600;
+  margin: 12px 0;
+}
+
+.venta-detalle__resumen {
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.venta-detalle__total {
+  font-size: 1.1rem;
+  margin-top: 8px;
+}
+
+.venta-detalle__subtitulo {
+  font-size: 1.1rem;
+  margin: 0 0 12px;
+}
+
+.venta-detalle__detalles {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.venta-detalle__detalles li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  font-size: 0.92rem;
+}
+
+.venta-detalle__acciones {
+  display: flex;
+  gap: 12px;
+}

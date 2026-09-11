@@ -1,0 +1,16 @@
+.formulario-auth {
+  max-width: 420px;
+}
+
+.formulario-auth__form {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.formulario-auth__enlace {
+  text-align: center;
+  margin: 14px 0 0;
+  font-size: 0.9rem;
+  color: var(--color-texto-suave);
+}

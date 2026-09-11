@@ -1,18 +1,19 @@
 import MedioPago from '../models/medioPago.model.js';
 import AppError from '../errors/AppError.js';
+import {
+  MAXIMO_ENTERO_POSITIVO,
+  esObjetoPlano,
+  validarEnteroEnRango,
+  limpiarCadenaOpcional,
+} from '../utils/validacion.js';
 
-const validarId = (id) => {
-  const idMedioPago = Number(id);
-
-  if (!Number.isInteger(idMedioPago) || idMedioPago <= 0) {
-    throw new AppError(
-      'El ID del medio de pago no es válido',
-      400,
-    );
-  }
-
-  return idMedioPago;
-};
+const validarId = (id) =>
+  validarEnteroEnRango(
+    id,
+    1,
+    MAXIMO_ENTERO_POSITIVO,
+    'El ID del medio de pago no es válido',
+  );
 
 const prepararHabilitado = (valor) => {
   if (valor === undefined) {
@@ -34,13 +35,17 @@ const prepararHabilitado = (valor) => {
 };
 
 const prepararDatos = (datos) => {
+  if (!esObjetoPlano(datos)) {
+    throw new AppError('El cuerpo del medio de pago no es válido', 400);
+  }
+
   const nombre =
     typeof datos.nombre === 'string' ? datos.nombre.trim() : '';
 
-  const descripcion =
-    typeof datos.descripcion === 'string'
-      ? datos.descripcion.trim()
-      : null;
+  const descripcion = limpiarCadenaOpcional(
+    datos.descripcion,
+    'La descripción',
+  );
 
   const habilitado = prepararHabilitado(datos.habilitado);
 
@@ -88,8 +93,8 @@ const crearMedioPago = async (datos) => {
 };
 
 const actualizarMedioPago = async (id, datos) => {
-  const medioPago = await obtenerMedioPagoPorId(id);
   const datosPreparados = prepararDatos(datos);
+  const medioPago = await obtenerMedioPagoPorId(id);
 
   await medioPago.update(datosPreparados);
 

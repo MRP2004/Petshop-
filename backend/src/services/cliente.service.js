@@ -1,27 +1,28 @@
 import Cliente from '../models/cliente.model.js';
 import AppError from '../errors/AppError.js';
+import {
+  MAXIMO_ENTERO_POSITIVO,
+  esObjetoPlano,
+  validarEnteroEnRango,
+  limpiarCadenaOpcional,
+} from '../utils/validacion.js';
 
-const validarId = (id) => {
-  const idCliente = Number(id);
+const validarId = (id) =>
+  validarEnteroEnRango(
+    id,
+    1,
+    MAXIMO_ENTERO_POSITIVO,
+    'El ID del cliente no es válido',
+  );
 
-  if (!Number.isInteger(idCliente) || idCliente <= 0) {
-    throw new AppError('El ID del cliente no es válido', 400);
-  }
-
-  return idCliente;
-};
-
-const limpiarCampoOpcional = (valor) => {
-  if (typeof valor !== 'string') {
-    return null;
-  }
-
-  const valorLimpio = valor.trim();
-
-  return valorLimpio || null;
-};
-
+// Exportada (como prepararDatosCliente) para que el registro público de
+// usuarios (usuario.service.js) valide los datos de Cliente con las mismas
+// reglas que el CRUD administrativo, en vez de duplicarlas.
 const prepararDatos = (datos) => {
+  if (!esObjetoPlano(datos)) {
+    throw new AppError('El cuerpo del cliente no es válido', 400);
+  }
+
   const nombre =
     typeof datos.nombre === 'string' ? datos.nombre.trim() : '';
 
@@ -30,9 +31,9 @@ const prepararDatos = (datos) => {
       ? datos.apellido.trim()
       : '';
 
-  const telefono = limpiarCampoOpcional(datos.telefono);
-  const email = limpiarCampoOpcional(datos.email);
-  const direccion = limpiarCampoOpcional(datos.direccion);
+  const telefono = limpiarCadenaOpcional(datos.telefono, 'El teléfono');
+  const email = limpiarCadenaOpcional(datos.email, 'El correo electrónico');
+  const direccion = limpiarCadenaOpcional(datos.direccion, 'La dirección');
 
   if (nombre.length < 2 || nombre.length > 50) {
     throw new AppError(
@@ -111,8 +112,8 @@ const crearCliente = async (datos) => {
 };
 
 const actualizarCliente = async (id, datos) => {
-  const cliente = await obtenerClientePorId(id);
   const datosPreparados = prepararDatos(datos);
+  const cliente = await obtenerClientePorId(id);
 
   await cliente.update(datosPreparados);
 
@@ -131,4 +132,5 @@ export {
   crearCliente,
   actualizarCliente,
   eliminarCliente,
+  prepararDatos as prepararDatosCliente,
 };

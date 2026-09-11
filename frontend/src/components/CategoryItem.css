@@ -1,0 +1,21 @@
+.category-item {
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: 2px solid var(--color-borde);
+  border-radius: 30px;
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.category-item:hover {
+  border-color: var(--color-marca);
+}
+
+.category-item--activo {
+  background: var(--color-marca);
+  border-color: var(--color-marca);
+  color: #fff;
+}

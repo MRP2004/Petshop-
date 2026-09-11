@@ -21,17 +21,20 @@ const manejarErrores = (error, req, res, next) => {
     });
   }
 
+  // UniqueConstraintError extiende ValidationError en Sequelize: hay que
+  // comprobarlo primero, porque si no la rama de ValidationError la intercepta
+  // antes y el 409 de más abajo nunca se alcanza.
+  if (error instanceof UniqueConstraintError) {
+    return res.status(409).json({
+      error: 'Ya existe un registro con esos datos',
+    });
+  }
+
   if (error instanceof ValidationError) {
     return res.status(400).json({
       error:
         error.errors[0]?.message ||
         'Los datos enviados no son válidos',
-    });
-  }
-
-  if (error instanceof UniqueConstraintError) {
-    return res.status(409).json({
-      error: 'Ya existe un registro con esos datos',
     });
   }
 

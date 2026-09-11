@@ -8,7 +8,7 @@ import {
 
 const listar = async (req, res, next) => {
   try {
-    const ventas = await obtenerVentas();
+    const ventas = await obtenerVentas(req.usuario, req.query);
     res.status(200).json(ventas);
   } catch (error) {
     next(error);
@@ -17,7 +17,7 @@ const listar = async (req, res, next) => {
 
 const buscarPorId = async (req, res, next) => {
   try {
-    const venta = await obtenerVentaPorId(req.params.id);
+    const venta = await obtenerVentaPorId(req.params.id, req.usuario);
     res.status(200).json(venta);
   } catch (error) {
     next(error);
@@ -26,7 +26,7 @@ const buscarPorId = async (req, res, next) => {
 
 const registrar = async (req, res, next) => {
   try {
-    const venta = await registrarVenta(req.body);
+    const venta = await registrarVenta(req.body, req.usuario);
     res.status(201).json(venta);
   } catch (error) {
     next(error);
@@ -35,7 +35,7 @@ const registrar = async (req, res, next) => {
 
 const cancelar = async (req, res, next) => {
   try {
-    const venta = await cancelarVenta(req.params.id);
+    const venta = await cancelarVenta(req.params.id, req.usuario);
     res.status(200).json(venta);
   } catch (error) {
     next(error);
