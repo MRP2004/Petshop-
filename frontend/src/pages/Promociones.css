@@ -1,0 +1,31 @@
+.promociones__aviso {
+  background: #fff3bf;
+  color: #7a5b00;
+  padding: 12px 16px;
+  border-radius: var(--radio-borde);
+  font-size: 0.9rem;
+  margin: 0 0 20px;
+}
+
+.promociones__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.promociones__item {
+  padding: 16px;
+}
+
+.promociones__producto {
+  font-weight: 700;
+}
+
+.promociones__detalle {
+  margin: 6px 0 0;
+  color: var(--color-texto-suave);
+  font-size: 0.9rem;
+}

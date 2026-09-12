@@ -1,0 +1,12 @@
+.panel-ventas__filtros {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  max-width: 500px;
+  margin-bottom: 16px;
+}
+
+.panel-ventas__filtros .campo {
+  flex: 1;
+  min-width: 180px;
+}

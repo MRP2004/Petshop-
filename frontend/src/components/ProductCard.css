@@ -1,0 +1,55 @@
+.product-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-borde);
+  padding: 16px;
+  box-shadow: var(--sombra);
+  color: inherit;
+}
+
+.product-card__imagen {
+  font-size: 2.6rem;
+  background: var(--color-fondo);
+  border-radius: var(--radio-borde);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 110px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.product-card__imagen-real {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-card__nombre {
+  font-size: 1rem;
+  margin: 0 0 6px;
+  min-height: 42px;
+}
+
+.product-card__precio {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.product-card__stock {
+  font-size: 0.82rem;
+  color: var(--color-marca-oscuro);
+  margin: 0 0 12px;
+}
+
+.product-card__stock--agotado {
+  color: var(--color-peligro);
+}
+
+.product-card__boton {
+  margin-top: auto;
+  width: 100%;
+}

@@ -1,0 +1,50 @@
+name: Backend tests
+
+on:
+  push:
+    branches:
+      - main
+      - feature/backend-inicial
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-tests.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-tests.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar pruebas
+        run: npm test
+        env:
+          # Ninguna prueba de esta suite toca MySQL real (ver
+          # docs/backend-pruebas.md), así que no hace falta configurar
+          # DB_*; pero sí se firman/verifican JWT de prueba (ver
+          # test/ayudaAutenticacion.js), y eso requiere JWT_SECRET seteado.
+          # Este valor es exclusivo de CI, no se reutiliza en ningún
+          # ambiente real.
+          JWT_SECRET: ci-unicamente-no-es-un-secreto-real-0000000000
