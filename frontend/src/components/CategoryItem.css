@@ -2,8 +2,8 @@
   padding: 10px 20px;
   font-size: 0.95rem;
   font-weight: 600;
-  border: 2px solid var(--color-borde);
-  border-radius: 30px;
+  border: 2px solid var(--color-borde-interactivo);
+  border-radius: var(--radio-pildora);
   background: var(--color-superficie);
   color: var(--color-texto);
   transition: all 0.15s ease;
@@ -15,7 +15,9 @@
 }
 
 .category-item--activo {
-  background: var(--color-marca);
-  border-color: var(--color-marca);
+  /* marca-oscuro, no marca: texto blanco sobre --color-marca da ~3.48:1,
+     no llega a AA para texto normal (ver index.css). */
+  background: var(--color-marca-oscuro);
+  border-color: var(--color-marca-oscuro);
   color: #fff;
 }

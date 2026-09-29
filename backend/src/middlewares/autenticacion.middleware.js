@@ -2,6 +2,7 @@ import { verificarToken } from '../utils/token.js';
 import { analizarCookies } from '../utils/cookies.js';
 import { coincideCsrf } from '../utils/csrf.js';
 import { NOMBRE_COOKIE_SESION, NOMBRE_COOKIE_CSRF } from '../utils/sesion.js';
+import { esPersonalInterno, esCompradorRegistrado } from '../utils/roles.js';
 
 const METODOS_MUTABLES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -100,13 +101,17 @@ const requiereRol =
 // su propio registro (comparando req.usuario.idCliente contra :id); el
 // personal (vendedor/administrador) accede a cualquiera. Debe usarse después
 // de requiereAutenticacion.
+//
+// Ronda 2, Etapa 8: un vendedor independiente TAMBIÉN puede acceder a su
+// propio registro de Cliente (conserva idCliente, sigue siendo comprador) —
+// mismo chequeo que 'cliente', nunca el de personal interno.
 const permitirPropioClienteOStaff = (req, res, next) => {
-  if (['vendedor', 'administrador'].includes(req.usuario?.rol)) {
+  if (esPersonalInterno(req.usuario?.rol)) {
     return next();
   }
 
   if (
-    req.usuario?.rol === 'cliente' &&
+    esCompradorRegistrado(req.usuario?.rol) &&
     String(req.usuario.idCliente) === String(req.params.id)
   ) {
     return next();

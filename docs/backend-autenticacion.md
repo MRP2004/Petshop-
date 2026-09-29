@@ -272,10 +272,17 @@ con un cliente presente o por teléfono que puede negociar un descuento).
 Prueba de regresión: `test/ventaDescuentoAutorizacion.test.js`.
 
 La misma distinción se aplica a **listar** (`GET /api/ventas`: un cliente
-solo ve las suyas, sin importar qué filtros mande en la query), **ver el
-detalle** (`GET /api/ventas/:id`: 403 si no es propia y no es personal) y
-**cancelar** (`PATCH /api/ventas/:id/cancelar`). "Marcar como enviada" es
-exclusivo de personal: un cliente no marca su propio pedido como enviado.
+solo ve las suyas, sin importar qué filtros mande en la query) y **ver el
+detalle** (`GET /api/ventas/:id`: 403 si no es propia y no es personal).
+**Cancelar** (`PATCH /api/ventas/:id/cancelar`) y "marcar como enviada" son,
+en cambio, exclusivos de personal (corrección — revisión de Mauro sobre la
+venta #20: "el cliente ya no puede ejecutar una cancelación directa", tanto
+en la ruta como en el servicio, ver `venta.service.js#cancelarVenta`); un
+cliente que quiere cancelar su propia compra usa
+`POST /api/solicitudes-cancelacion` en su lugar (ver
+[cu04-checkout-pago.md](cu04-checkout-pago.md), "Solicitud de cancelación"),
+y el personal la aprueba o la rechaza con
+`PATCH /api/solicitudes-cancelacion/:id/aprobar`/`/rechazar`.
 
 ## Matriz de rutas protegidas
 
@@ -286,8 +293,10 @@ exclusivo de personal: un cliente no marca su propio pedido como enviado.
 | Escritura de productos/categorías/tipos de mascota/medios de pago/promociones | ❌ | ❌ | ✅ |
 | `GET`/`PUT /api/proveedores`, `/api/clientes` (listado completo) | ❌ | ❌ | ✅ |
 | `GET`/`PUT /api/clientes/:id` | ❌ | Solo el propio (`idCliente` del token) | ✅ (cualquiera) |
-| `POST /api/ventas`, `GET /api/ventas`, `GET /api/ventas/:id`, `PATCH /:id/cancelar` | ❌ | ✅ (solo las propias) | ✅ (cualquiera) |
-| `PATCH /api/ventas/:id/enviar` | ❌ | ❌ | ✅ |
+| `GET /api/ventas`, `GET /api/ventas/:id` | ❌ | ✅ (solo las propias) | ✅ (cualquiera) |
+| `POST /api/ventas`, `PATCH /api/ventas/:id/cancelar`, `PATCH /api/ventas/:id/enviar` | ❌ | ❌ | ✅ |
+| `POST /api/solicitudes-cancelacion` | ❌ | ✅ (solo sobre las propias) | ❌ |
+| `PATCH /api/solicitudes-cancelacion/:id/aprobar`, `/:id/rechazar` | ❌ | ❌ | ✅ |
 | `POST /api/usuarios/registro`, `POST /api/usuarios/login` | ✅ | ✅ | ✅ |
 | `GET /api/usuarios/perfil` | ❌ | ✅ | ✅ |
 | `POST /api/usuarios` (alta interna) | ❌ | ❌ | Solo `administrador` |

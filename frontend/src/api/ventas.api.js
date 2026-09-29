@@ -1,4 +1,4 @@
-import { solicitar } from './httpClient.js';
+import { solicitar, solicitarBinario } from './httpClient.js';
 
 // No usa crearServicioCrud: Venta no tiene PUT/DELETE (se registra o se
 // cancela, nunca se edita ni se borra), y agrega acciones propias
@@ -22,4 +22,22 @@ const cancelar = (id) => solicitar(`/ventas/${id}/cancelar`, { metodo: 'PATCH' }
 
 const marcarComoEnviada = (id) => solicitar(`/ventas/${id}/enviar`, { metodo: 'PATCH' });
 
-export default { listar, obtener, registrar, cancelar, marcarComoEnviada };
+const marcarComoEntregada = (id) => solicitar(`/ventas/${id}/entregar`, { metodo: 'PATCH' });
+
+// Comprobante (CU-04): PDF descargable y reenvío de correo, protegidos por
+// la misma regla "propia o personal" que ver la venta (backend).
+const descargarComprobantePdf = (id) => solicitarBinario(`/ventas/${id}/comprobante/pdf`);
+
+const reenviarCorreoComprobante = (id) =>
+  solicitar(`/ventas/${id}/comprobante/reenviar-correo`, { metodo: 'POST' });
+
+export default {
+  listar,
+  obtener,
+  registrar,
+  cancelar,
+  marcarComoEnviada,
+  marcarComoEntregada,
+  descargarComprobantePdf,
+  reenviarCorreoComprobante,
+};

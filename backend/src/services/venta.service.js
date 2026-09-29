@@ -6,8 +6,14 @@ import Cliente from '../models/cliente.model.js';
 import MedioPago from '../models/medioPago.model.js';
 import Producto from '../models/producto.model.js';
 import DireccionEntrega from '../models/direccionEntrega.model.js';
+import Pago from '../models/pago.model.js';
+import Comprobante from '../models/comprobante.model.js';
+import DetalleVentaPromocion from '../models/detalleVentaPromocion.model.js';
+import SolicitudCancelacion from '../models/solicitudCancelacion.model.js';
 import AppError from '../errors/AppError.js';
-import { prepararEnteroOpcional, limpiarCadenaOpcional } from '../utils/validacion.js';
+import { notificarClientePorIdCliente, notificarTiendasParticipantes, TIPOS_AVISO } from './aviso.service.js';
+import { verificarTiendasActivas } from './disponibilidadTienda.js';
+import { prepararEnteroOpcional } from '../utils/validacion.js';
 import {
   MAXIMO_ENTERO_POSITIVO,
   esObjetoPlano,
@@ -18,70 +24,10 @@ import {
   acumularSubtotalGeneral,
   calcularTotalCentavos,
   prepararDetalles,
+  prepararEntrega,
+  esPropiaOPersonal,
 } from '../utils/ventaValidaciones.js';
-
-// Únicos dos valores reconocidos (coinciden con las opciones fijas que ya
-// ofrece el checkout del frontend, Checkout.jsx y PanelNuevaVenta.jsx): no
-// es una lista abierta, para poder exigir domicilio de forma confiable
-// cuando corresponde entrega a domicilio.
-const METODOS_ENTREGA_VALIDOS = ['retiro en sucursal', 'envío a domicilio'];
-const LONGITUD_MINIMA_DIRECCION = 8;
-const LONGITUD_MAXIMA_DIRECCION = 200;
-
-// Envío a domicilio no puede confirmarse sin domicilio: si falta o es
-// demasiado corto para ser una dirección real, se rechaza la venta entera
-// (no se registra "a medias" con la entrega sin poder completarse). Para
-// "retiro en sucursal" (o sin método indicado) se ignora cualquier
-// dirección que igual se mande: no aplica, y no tiene sentido persistirla.
-const prepararEntrega = (datos) => {
-  const metodoEntregaCrudo =
-    typeof datos.metodoEntrega === 'string' ? datos.metodoEntrega.trim() : '';
-
-  if (!metodoEntregaCrudo) {
-    return { metodoEntrega: null, direccionEntrega: null };
-  }
-
-  if (!METODOS_ENTREGA_VALIDOS.includes(metodoEntregaCrudo)) {
-    throw new AppError(
-      `El método de entrega debe ser uno de: ${METODOS_ENTREGA_VALIDOS.join(', ')}`,
-      400,
-    );
-  }
-
-  if (metodoEntregaCrudo !== 'envío a domicilio') {
-    return { metodoEntrega: metodoEntregaCrudo, direccionEntrega: null };
-  }
-
-  const direccionEntrega = limpiarCadenaOpcional(datos.direccionEntrega, 'La dirección de entrega');
-
-  if (!direccionEntrega || direccionEntrega.length < LONGITUD_MINIMA_DIRECCION) {
-    throw new AppError(
-      `La dirección de entrega es obligatoria para envío a domicilio (mínimo ${LONGITUD_MINIMA_DIRECCION} caracteres)`,
-      400,
-    );
-  }
-
-  if (direccionEntrega.length > LONGITUD_MAXIMA_DIRECCION) {
-    throw new AppError(
-      `La dirección de entrega no puede superar los ${LONGITUD_MAXIMA_DIRECCION} caracteres`,
-      400,
-    );
-  }
-
-  return { metodoEntrega: metodoEntregaCrudo, direccionEntrega };
-};
-
-// Una venta le pertenece a un cliente autenticado si coincide el idCliente;
-// el personal (vendedor/administrador) puede operar sobre cualquiera. Se usa
-// tanto para listar/ver como para cancelar, así la regla de "solo mis
-// compras" vive en un único lugar.
-const esPropiaOPersonal = (usuario, idClienteVenta) => {
-  if (['vendedor', 'administrador'].includes(usuario?.rol)) {
-    return true;
-  }
-
-  return usuario?.rol === 'cliente' && usuario.idCliente === idClienteVenta;
-};
+import { esPersonalInterno, esCompradorRegistrado } from '../utils/roles.js';
 
 // Interpretación propuesta (pendiente de confirmación de Mauro, ver
 // docs/estado-proyecto.md): "ventas por proveedor" son las que incluyen al
@@ -106,6 +52,12 @@ const obtenerIdsVentaPorProveedor = async (idProveedor) => {
   return filas.map((fila) => fila.idVenta);
 };
 
+// pago/comprobante (CU-04) son opcionales: solo existen para ventas creadas
+// por el checkout con pago simulado (compra.service.js), no para las
+// cargadas manualmente por el personal (registrarVenta, más abajo) ni para
+// ventas anteriores a esta etapa — VentaDetalle.jsx (frontend) decide qué
+// mostrar según si vienen presentes o no, nunca simula un pago que no
+// existió.
 const relacionesVenta = [
   {
     model: Cliente,
@@ -123,12 +75,37 @@ const relacionesVenta = [
         model: Producto,
         as: 'producto',
       },
+      {
+        model: DetalleVentaPromocion,
+        as: 'promocionAplicada',
+        required: false,
+      },
     ],
   },
   {
     model: DireccionEntrega,
     as: 'direccionEntrega',
     required: false, // solo existe cuando metodoEntrega es "envío a domicilio"
+  },
+  {
+    model: Pago,
+    as: 'pago',
+    required: false,
+  },
+  {
+    model: Comprobante,
+    as: 'comprobante',
+    required: false,
+  },
+  {
+    // Historial de solicitudes de cancelación del cliente (CU-04,
+    // corrección — "quede registrada para que vendedor o administrador
+    // pueda verla"): casi siempre vacío o con una sola fila; se incluye
+    // completo (no solo la pendiente) para que la pantalla también pueda
+    // mostrar una ya rechazada, en vez de una segunda consulta aparte.
+    model: SolicitudCancelacion,
+    as: 'solicitudesCancelacion',
+    required: false,
   },
 ];
 
@@ -138,9 +115,17 @@ const relacionesVenta = [
 const obtenerVentas = async (usuario, filtros = {}) => {
   const where = {};
 
-  if (usuario?.rol === 'cliente') {
+  // Ronda 2, Etapa 8: un vendedor independiente ve sus PROPIAS compras acá
+  // (sigue siendo comprador) — nunca las ventas de su tienda como vendedor,
+  // que es un acceso deliberadamente distinto y más restringido (ver
+  // tienda.service.js#listarVentasDeTienda). Corrección de diseño tras la
+  // revisión de Codex: antes esto era un `if (rol === 'cliente') {...} else
+  // {...}` donde el "else" asumía sin decirlo que cualquier otro rol era
+  // personal interno — un vendedor independiente hubiera caído ahí y visto
+  // TODAS las ventas de TODOS los clientes.
+  if (esCompradorRegistrado(usuario?.rol)) {
     where.idCliente = usuario.idCliente;
-  } else {
+  } else if (esPersonalInterno(usuario?.rol)) {
     const idClienteFiltro = prepararEnteroOpcional(
       filtros.idCliente,
       1,
@@ -168,6 +153,12 @@ const obtenerVentas = async (usuario, filtros = {}) => {
 
       where.idVenta = { [Op.in]: idsVenta };
     }
+  } else {
+    // Ni comprador registrado ni personal interno (rol desconocido, o
+    // ausente): denegado explícitamente, nunca "sin filtro" — evita que un
+    // rol nuevo que se agregue en el futuro y se olvide de contemplar acá
+    // termine viendo todas las ventas de todos los clientes por omisión.
+    throw new AppError('No tiene permisos para ver ventas', 403);
   }
 
   return Venta.findAll({
@@ -206,17 +197,20 @@ const registrarVenta = async (datos, usuario) => {
     throw new AppError('El cuerpo de la venta no es válido', 400);
   }
 
-  // Un cliente autenticado compra siempre para sí mismo: el idCliente se
+  // Un comprador autenticado ('cliente' o 'vendedor_independiente', que
+  // sigue siendo comprador) compra siempre para sí mismo: el idCliente se
   // deriva de la sesión, nunca del cuerpo de la solicitud (evita que
   // modificando idCliente en el JSON se pueda comprar "como" otro cliente).
   // El personal, en cambio, elige el cliente al cargar una venta manual.
-  const idCliente =
-    usuario?.rol === 'cliente'
-      ? usuario.idCliente
-      : validarEnteroPositivo(
-          datos.idCliente,
-          'El ID del cliente no es válido',
-        );
+  // En la práctica, esta rama de "comprador" es inalcanzable desde la ruta
+  // HTTP real (POST /api/ventas exige rol vendedor/administrador, ver
+  // venta.routes.js) — se mantiene igual como defensa en profundidad.
+  const idCliente = esCompradorRegistrado(usuario?.rol)
+    ? usuario.idCliente
+    : validarEnteroPositivo(
+        datos.idCliente,
+        'El ID del cliente no es válido',
+      );
 
   const idMedioPago = validarEnteroPositivo(
     datos.idMedioPago,
@@ -235,7 +229,7 @@ const registrarVenta = async (datos, usuario) => {
   // si quien compra es un cliente, estos campos se ignoran por completo
   // (igual que ya se hacía con idCliente): ni siquiera se leen del cuerpo,
   // así que no hay ninguna forma de manipularlos desde la solicitud.
-  const esCliente = usuario?.rol === 'cliente';
+  const esCliente = esCompradorRegistrado(usuario?.rol);
 
   const minimoMayoristaCentavos = esCliente
     ? null
@@ -255,8 +249,16 @@ const registrarVenta = async (datos, usuario) => {
         throw new AppError('El cliente indicado no existe', 400);
       }
 
+      // Lock coherente con compra.service.js#resolverMedioPagoSimulado
+      // (revisión de diseño, Codex — CU-04, ronda de correcciones): la
+      // carga manual del personal comprobaba `habilitado` pero sin
+      // bloquear la fila, así que una deshabilitación concurrente durante
+      // la misma ventana no quedaba cubierta. Mismo orden de locks que el
+      // checkout (medio de pago antes que los productos, bloqueados más
+      // abajo en este mismo bucle).
       const medioPago = await MedioPago.findByPk(idMedioPago, {
         transaction,
+        lock: transaction.LOCK.UPDATE,
       });
 
       if (!medioPago) {
@@ -331,6 +333,13 @@ const registrarVenta = async (datos, usuario) => {
         });
       }
 
+      // Etapa 9: mismo control que el checkout, después de bloquear todos los
+      // productos (orden producto → tienda, ver disponibilidadTienda.js).
+      const tiendasPorId = await verificarTiendasActivas(
+        detallesCalculados.map((detalle) => detalle.producto),
+        { transaction },
+      );
+
       const totalCentavos = calcularTotalCentavos(
         subtotalGeneralCentavos,
         descuentoCentavos,
@@ -404,6 +413,8 @@ const registrarVenta = async (datos, usuario) => {
         );
       }
 
+      await notificarTiendasParticipantes({ idVenta: venta.idVenta, tiendasPorId }, transaction);
+
       return venta.idVenta;
     },
   );
@@ -411,11 +422,145 @@ const registrarVenta = async (datos, usuario) => {
   return obtenerVentaPorId(idVenta, usuario);
 };
 
+// Lógica transaccional compartida entre la cancelación directa del personal
+// (cancelarVenta, abajo) y la aprobación de una solicitud de cancelación del
+// cliente (solicitudCancelacion.service.js#resolverSolicitudCancelacion) —
+// CU-04, corrección: "al aprobar, reutilizá la cancelación transaccional
+// existente" (no dos implementaciones que puedan divergir). Asume que
+// `venta` YA está bloqueada (SELECT...FOR UPDATE) y validada como
+// 'registrada' por quien llama: no repite ninguna de las dos cosas.
+const ejecutarCancelacionTransaccional = async (venta, transaction) => {
+  const detalles = await DetalleVenta.findAll({
+    where: { idVenta: venta.idVenta },
+    transaction,
+    order: [['idProducto', 'ASC']],
+  });
+
+  for (const detalle of detalles) {
+    const producto = await Producto.findByPk(
+      detalle.idProducto,
+      {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      },
+    );
+
+    if (!producto) {
+      throw new AppError(
+        `No se encontró el producto ${detalle.idProducto}`,
+        409,
+      );
+    }
+
+    const stockRestituido = producto.stockActual + detalle.cantidad;
+
+    // La restitución no puede exceder el rango de una columna INTEGER
+    // firmada. Si esto ocurre, se rechaza toda la cancelación (409) y la
+    // transacción revierte también los productos ya restituidos en
+    // iteraciones anteriores de este mismo bucle: no puede quedar una
+    // cancelación a medio aplicar.
+    if (
+      !Number.isSafeInteger(stockRestituido) ||
+      stockRestituido > MAXIMO_ENTERO_POSITIVO
+    ) {
+      throw new AppError(
+        `Restituir el stock del producto ${producto.nombre} superaría el máximo permitido`,
+        409,
+      );
+    }
+
+    await producto.update(
+      {
+        stockActual: stockRestituido,
+      },
+      {
+        transaction,
+      },
+    );
+  }
+
+  // Reversión del pago simulado (CU-04), en la misma transacción que
+  // restituye el stock: si la venta viene del checkout con pago simulado
+  // tiene una fila en Pago con estado 'aprobado_simulado'; se marca
+  // 'revertido_simulado' acá. Ventas sin Pago (carga manual del personal,
+  // o anteriores a esta etapa) no tienen nada que revertir — se ignoran,
+  // sin inventar un pago que nunca existió (mismo criterio que
+  // relacionesVenta, más arriba).
+  const pago = await Pago.findByPk(venta.idVenta, {
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+
+  if (pago && pago.estado === 'aprobado_simulado') {
+    await pago.update(
+      { estado: 'revertido_simulado' },
+      { transaction },
+    );
+  }
+
+  await venta.update(
+    {
+      estado: 'cancelada',
+    },
+    {
+      transaction,
+    },
+  );
+};
+
+// Al cancelar directamente o marcar como enviada SIN pasar por una
+// solicitud de cancelación del cliente, cualquier solicitud que hubiera
+// quedado 'pendiente' para esta venta deja de tener sentido — dejarla
+// pendiente para siempre es un estado de negocio confuso (hallazgo real,
+// revisión independiente sobre esta misma corrección: nunca duplica stock
+// ni pago, pero sí queda una solicitud "huérfana" que nadie vuelve a
+// mirar). Se cierra acá, en la MISMA transacción que cambia la venta:
+// 'aprobada' si la venta terminó `cancelada` (el resultado que el cliente
+// pedía SÍ ocurrió, solo que por la vía directa del personal, no por esta
+// solicitud en particular); 'rechazada', con un motivo explicativo, si la
+// venta se marcó `enviada` (ya no se puede cancelar). No afecta la
+// aprobación de una solicitud EXISTENTE (`resolverSolicitudCancelacion`,
+// en solicitudCancelacion.service.js): esa actualiza su propia fila por
+// `idSolicitud`, por separado, después de llamar a
+// `ejecutarCancelacionTransaccional` — esta función no se llama desde ahí.
+const cerrarSolicitudesPendientesPorCambioDirecto = async (
+  idVenta,
+  transaction,
+  { estado, motivoRechazo, idUsuarioResolvio },
+) => {
+  await SolicitudCancelacion.update(
+    {
+      estado,
+      resueltoEn: new Date(),
+      idUsuarioResolvio: idUsuarioResolvio ?? null,
+      motivoRechazo: motivoRechazo ?? null,
+    },
+    { where: { idVenta, estado: 'pendiente' }, transaction },
+  );
+};
+
+// Cancelación DIRECTA: exclusiva del personal (CU-04, corrección — revisión
+// de Mauro sobre la venta #20: "el cliente ya no puede ejecutar una
+// cancelación directa"). La ruta ya exige vendedor/administrador (ver
+// venta.routes.js); este chequeo es defensa en profundidad para cualquier
+// llamada directa al servicio que se salteara la ruta. A diferencia de
+// marcarVentaComoEnviada (que no recibe usuario y confía en quien llama),
+// acá exigimos explícitamente vendedor o administrador: cualquier otro rol,
+// un rol desconocido, o la ausencia de usuario, se rechaza con 403. Un
+// cliente que quiere cancelar su propia compra usa
+// solicitudCancelacion.service.js#solicitarCancelacion en su lugar.
 const cancelarVenta = async (id, usuario) => {
   const idVenta = validarEnteroPositivo(
     id,
     'El ID de la venta no es válido',
   );
+
+  if (!esPersonalInterno(usuario?.rol)) {
+    throw new AppError(
+      'No tiene permisos para cancelar esta venta',
+      403,
+    );
+  }
 
   await sequelize.transaction(async (transaction) => {
     const venta = await Venta.findByPk(idVenta, {
@@ -427,10 +572,6 @@ const cancelarVenta = async (id, usuario) => {
       throw new AppError('Venta no encontrada', 404);
     }
 
-    if (usuario && !esPropiaOPersonal(usuario, venta.idCliente)) {
-      throw new AppError('No tiene permisos para cancelar esta venta', 403);
-    }
-
     if (venta.estado !== 'registrada') {
       throw new AppError(
         'Solo se pueden cancelar ventas registradas',
@@ -438,62 +579,24 @@ const cancelarVenta = async (id, usuario) => {
       );
     }
 
-    const detalles = await DetalleVenta.findAll({
-      where: { idVenta },
-      transaction,
-      order: [['idProducto', 'ASC']],
+    await ejecutarCancelacionTransaccional(venta, transaction);
+    await cerrarSolicitudesPendientesPorCambioDirecto(idVenta, transaction, {
+      estado: 'aprobada',
+      idUsuarioResolvio: usuario?.idUsuario,
     });
 
-    for (const detalle of detalles) {
-      const producto = await Producto.findByPk(
-        detalle.idProducto,
-        {
-          transaction,
-          lock: transaction.LOCK.UPDATE,
-        },
-      );
-
-      if (!producto) {
-        throw new AppError(
-          `No se encontró el producto ${detalle.idProducto}`,
-          409,
-        );
-      }
-
-      const stockRestituido = producto.stockActual + detalle.cantidad;
-
-      // La restitución no puede exceder el rango de una columna INTEGER
-      // firmada. Si esto ocurre, se rechaza toda la cancelación (409) y la
-      // transacción revierte también los productos ya restituidos en
-      // iteraciones anteriores de este mismo bucle: no puede quedar una
-      // cancelación a medio aplicar.
-      if (
-        !Number.isSafeInteger(stockRestituido) ||
-        stockRestituido > MAXIMO_ENTERO_POSITIVO
-      ) {
-        throw new AppError(
-          `Restituir el stock del producto ${producto.nombre} superaría el máximo permitido`,
-          409,
-        );
-      }
-
-      await producto.update(
-        {
-          stockActual: stockRestituido,
-        },
-        {
-          transaction,
-        },
-      );
-    }
-
-    await venta.update(
+    // Aviso in-app (ronda 2, Etapa 6): solo si el Cliente de esta venta
+    // tiene una cuenta con la que iniciar sesión — una venta cargada
+    // manualmente por el personal puede ser de un Cliente sin Usuario
+    // asociado, y en ese caso no hay a quién avisar (no es un error).
+    await notificarClientePorIdCliente(
       {
-        estado: 'cancelada',
+        idCliente: venta.idCliente,
+        tipo: TIPOS_AVISO.VENTA_CANCELADA,
+        mensaje: `Tu compra #${venta.idVenta} fue cancelada por el personal.`,
+        enlace: `/mis-compras/${venta.idVenta}`,
       },
-      {
-        transaction,
-      },
+      transaction,
     );
   });
 
@@ -508,6 +611,18 @@ const cancelarVenta = async (id, usuario) => {
 // bloqueo usa el mismo punto de entrada (la fila de Venta) que
 // cancelarVenta, así que ambas operaciones se serializan sobre esa fila sin
 // necesidad de un orden adicional entre ellas.
+//
+// Ronda 2, Etapa 7 (diseño de esquema revisado con Codex ANTES de escribir
+// esto — ver docs/estado-proyecto.md): antes, esta función siempre pasaba
+// a 'enviada' sin importar el método de entrega real, así que un retiro en
+// sucursal terminaba mostrando el mismo estado que un envío a domicilio —
+// el defecto real que esta etapa corrige. Ahora bifurca por
+// `metodoEntrega`: 'envío a domicilio' → 'enviada' (sin cambios); 'retiro
+// en sucursal' → 'lista_para_retirar' (nuevo). Un `metodoEntrega` nulo o
+// desconocido (ventas cargadas antes de que este campo existiera) se trata
+// como fallback LEGADO hacia 'enviada' — a propósito, para no romper el
+// comportamiento de ventas ya registradas antes de esta ronda; nunca se
+// infiere "retiro" de una ausencia de dato.
 const marcarVentaComoEnviada = async (id) => {
   const idVenta = validarEnteroPositivo(
     id,
@@ -531,13 +646,89 @@ const marcarVentaComoEnviada = async (id) => {
       );
     }
 
+    const esRetiroEnSucursal = venta.metodoEntrega === 'retiro en sucursal';
+    const nuevoEstado = esRetiroEnSucursal ? 'lista_para_retirar' : 'enviada';
+
     await venta.update(
       {
-        estado: 'enviada',
+        estado: nuevoEstado,
       },
       {
         transaction,
       },
+    );
+
+    await cerrarSolicitudesPendientesPorCambioDirecto(idVenta, transaction, {
+      estado: 'rechazada',
+      motivoRechazo: esRetiroEnSucursal
+        ? 'La venta se marcó como lista para retirar antes de resolver esta solicitud.'
+        : 'La venta se marcó como enviada antes de resolver esta solicitud.',
+    });
+
+    // Aviso in-app (ronda 2, Etapa 6, extendido en la Etapa 7): mismo
+    // criterio que cancelarVenta, más arriba — se ignora en silencio si el
+    // Cliente no tiene Usuario.
+    await notificarClientePorIdCliente(
+      {
+        idCliente: venta.idCliente,
+        tipo: esRetiroEnSucursal ? TIPOS_AVISO.VENTA_LISTA_PARA_RETIRAR : TIPOS_AVISO.VENTA_ENVIADA,
+        mensaje: esRetiroEnSucursal
+          ? `Tu compra #${venta.idVenta} ya está lista para retirar en el local.`
+          : `Tu compra #${venta.idVenta} fue marcada como enviada.`,
+        enlace: `/mis-compras/${venta.idVenta}`,
+      },
+      transaction,
+    );
+  });
+
+  return obtenerVentaPorId(idVenta);
+};
+
+// Confirma la entrega/retiro efectivo (Etapa 7, nueva): única vía hacia
+// 'entregada', válida desde 'enviada' O 'lista_para_retirar' — nunca
+// directo desde 'registrada' (revisión de diseño, Codex: "evita saltear el
+// hito operativo intermedio"). Mismo patrón de bloqueo que las demás
+// transiciones de esta fila.
+const marcarVentaComoEntregada = async (id) => {
+  const idVenta = validarEnteroPositivo(
+    id,
+    'El ID de la venta no es válido',
+  );
+
+  await sequelize.transaction(async (transaction) => {
+    const venta = await Venta.findByPk(idVenta, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!venta) {
+      throw new AppError('Venta no encontrada', 404);
+    }
+
+    if (venta.estado !== 'enviada' && venta.estado !== 'lista_para_retirar') {
+      throw new AppError(
+        'Solo se pueden marcar como entregadas las ventas enviadas o listas para retirar',
+        409,
+      );
+    }
+
+    await venta.update(
+      {
+        estado: 'entregada',
+      },
+      {
+        transaction,
+      },
+    );
+
+    await notificarClientePorIdCliente(
+      {
+        idCliente: venta.idCliente,
+        tipo: TIPOS_AVISO.VENTA_ENTREGADA,
+        mensaje: `Tu compra #${venta.idVenta} fue entregada.`,
+        enlace: `/mis-compras/${venta.idVenta}`,
+      },
+      transaction,
     );
   });
 
@@ -550,4 +741,9 @@ export {
   registrarVenta,
   cancelarVenta,
   marcarVentaComoEnviada,
+  marcarVentaComoEntregada,
+  // Exportada para que solicitudCancelacion.service.js reutilice la MISMA
+  // lógica transaccional al aprobar una solicitud (ver comentario junto a
+  // su definición, arriba).
+  ejecutarCancelacionTransaccional,
 };

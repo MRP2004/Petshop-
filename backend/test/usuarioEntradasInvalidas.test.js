@@ -4,6 +4,8 @@ import request from 'supertest';
 
 import app from '../src/app.js';
 import sequelize from '../src/config/database.js';
+import Usuario from '../src/models/usuario.model.js';
+import Cliente from '../src/models/cliente.model.js';
 import {
   registrarUsuario,
   crearUsuarioInterno,
@@ -202,14 +204,59 @@ test('GET /api/usuarios/perfil con token inválido responde 401', async () => {
   assert.equal(respuesta.body.error, 'La sesión no es válida o expiró');
 });
 
-test('GET /api/usuarios/perfil con token válido devuelve lo codificado en el token (sin consultar la base)', async () => {
-  const respuesta = await request(app)
-    .get('/api/usuarios/perfil')
-    .set('Authorization', autorizacion(tokenCliente(7)))
-    .expect(200);
+// Ronda 2: perfil ya no devuelve el payload del token tal cual — hace una
+// consulta fresca (Usuario + Cliente) para poder incluir nombre/apellido/
+// email (ver usuario.service.js#obtenerPerfil). Este caso SÍ toca la base
+// (a propósito, es la excepción de este archivo), así que stubea
+// puntualmente Usuario.findByPk/Cliente.findByPk (mismo criterio que
+// sesionYCsrf.test.js) en vez de dejar pasar la consulta real bloqueada
+// por el resguardo global de este archivo.
+test('GET /api/usuarios/perfil con token válido devuelve el perfil con nombre real (consulta fresca, no el token)', async () => {
+  const usuarioFindByPkOriginal = Usuario.findByPk;
+  const clienteFindByPkOriginal = Cliente.findByPk;
 
-  assert.equal(respuesta.body.rol, 'cliente');
-  assert.equal(respuesta.body.idCliente, 7);
+  // tokenCliente(idCliente, idUsuario) — el idUsuario del token (no el
+  // idCliente) es lo que Usuario.findByPk recibe de req.usuario.idUsuario.
+  Usuario.findByPk = async (idUsuario) => {
+    if (Number(idUsuario) !== 1001) return null;
+    return { idUsuario: 1001, email: 'cliente-perfil@example.com', rol: 'cliente', idCliente: 7 };
+  };
+  Cliente.findByPk = async (idCliente) => {
+    if (Number(idCliente) !== 7) return null;
+    return { nombre: 'Juan', apellido: 'Pérez' };
+  };
+
+  try {
+    const respuesta = await request(app)
+      .get('/api/usuarios/perfil')
+      .set('Authorization', autorizacion(tokenCliente(7)))
+      .expect(200);
+
+    assert.equal(respuesta.body.rol, 'cliente');
+    assert.equal(respuesta.body.idCliente, 7);
+    assert.equal(respuesta.body.email, 'cliente-perfil@example.com');
+    assert.equal(respuesta.body.nombre, 'Juan');
+    assert.equal(respuesta.body.apellido, 'Pérez');
+  } finally {
+    Usuario.findByPk = usuarioFindByPkOriginal;
+    Cliente.findByPk = clienteFindByPkOriginal;
+  }
+});
+
+test('GET /api/usuarios/perfil con token válido pero cuenta ya borrada responde 401, no 500', async () => {
+  const usuarioFindByPkOriginal = Usuario.findByPk;
+  Usuario.findByPk = async () => null;
+
+  try {
+    const respuesta = await request(app)
+      .get('/api/usuarios/perfil')
+      .set('Authorization', autorizacion(tokenCliente(7)))
+      .expect(401);
+
+    assert.equal(respuesta.body.error, 'Sesión inválida');
+  } finally {
+    Usuario.findByPk = usuarioFindByPkOriginal;
+  }
 });
 
 test('POST /api/usuarios (alta interna) sin token responde 401', async () => {

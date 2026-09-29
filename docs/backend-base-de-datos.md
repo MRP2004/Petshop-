@@ -34,6 +34,121 @@ proyecto**, ni en desarrollo ni en las pruebas de integración. `force: true`
 borra y recrea todas las tablas (destructivo); `alter: true` puede truncar
 o perder datos al intentar ajustar columnas existentes.
 
+**CU-04 (checkout, pago simulado), primera entrega** siguió exactamente
+este criterio: las cuatro tablas que agrega (`pago`, `comprobante`,
+`detalleventapromocion`, `intentocompra`) son todas tablas NUEVAS,
+relacionadas 1 a 1 (o N a 1, en el caso de `intentocompra`) con
+`venta`/`detalleventa`/`cliente` — ninguna requirió agregar una columna a
+una tabla existente, así que no hizo falta ningún `ALTER TABLE` ni
+migración aparte: reiniciar el backend (que llama a `sync()`) alcanza.
+Verificado explícitamente, instalación nueva y actualización de un
+esquema previo con datos ya cargados, contra una base descartable — ver
+`backend/scripts/verificarMigracionCU04.js`.
+
+**CU-04, segunda ronda de correcciones**: acá SÍ hizo falta un
+`ALTER TABLE` real, porque esta ronda modifica tablas que la primera
+entrega ya había creado (`mediopago`, `comprobante`) — exactamente el caso
+que este documento describe arriba como "requiere una intervención manual
+explícita". Tres cambios, todos con su propio chequeo de idempotencia
+antes de aplicarse (consultar `INFORMATION_SCHEMA` para ver si ya están
+hechos, no asumir un estado de partida):
+
+1. Índice único sobre `mediopago.nombre` (lo necesita un `SELECT...FOR UPDATE`
+   nuevo en `compra.service.js`).
+2. `comprobante.estadoCorreo`: el ENUM se AMPLÍA primero (superconjunto de
+   valores viejos y nuevos), se migran los datos (`'enviado'` →
+   `'simulado'`, la única interpretación segura posible dado que este
+   proyecto nunca tuvo SMTP real configurado), y recién después se ANGOSTA
+   al conjunto final — angostar un ENUM de MySQL mientras todavía hay
+   filas usando un valor que se está por quitar puede convertir esas filas
+   silenciosamente a la cadena vacía, un riesgo real que este orden evita.
+3. Tres columnas nuevas NULLABLES en `comprobante` (instantánea histórica
+   del comprador) — `NULL` en filas existentes, a propósito: no se
+   reconstruye un dato histórico que nunca se guardó.
+
+Script: `backend/scripts/migrarCU04Ronda2.js --confirmar` (con la lógica
+en `migracionCU04Ronda2.js`, reutilizada también por el script de
+verificación). **No corre solo con reiniciar el backend** — a diferencia
+de la primera entrega, `sync()` no hace nada de esto (nunca altera tablas
+existentes). Verificado contra `petshop_test` descartable, con el esquema
+previo de la primera entrega de CU-04 (con datos ya cargados) y aplicando
+la migración dos veces seguidas para confirmar que la segunda corrida es
+un no-op seguro — ver `backend/scripts/verificarMigracionCU04Ronda2.js` y
+[cu04-checkout-pago.md](cu04-checkout-pago.md), §4, para la salida
+completa de ambos scripts de verificación.
+
+**CU-04, cuarta ronda de correcciones**: vuelve al caso simple, como la
+primera entrega — la única tabla nueva, `solicitudcancelacion` (solicitud
+de cancelación del cliente, ver
+[cu04-checkout-pago.md](cu04-checkout-pago.md) §7), es eso, una tabla
+NUEVA, relacionada 1 a N con `venta` — no altera ninguna columna ni tabla
+existente, así que no hizo falta ningún `ALTER TABLE` ni script de
+migración: reiniciar el backend (que llama a `sync()`) alcanza, igual que
+en la primera entrega.
+
+**Ronda 2 (rediseño integral), Etapas 4, 5 y 6**: tres tablas nuevas
+(`direccioncliente`, `favorito`, `aviso`), ninguna toca una tabla
+existente — otra vez el caso simple, reiniciar el backend alcanza.
+
+**Ronda 2, Etapa 7 (estados de pedido: retiro vs. envío)**: vuelve a
+necesitar un `ALTER TABLE` real, esta vez sobre `venta` (una tabla con
+historial de ventas reales). Único cambio: `venta.estado` se AMPLÍA (nunca
+se angosta) de 3 a 5 valores — a diferencia de
+`comprobante.estadoCorreo` en la ronda anterior, acá no hace falta ningún
+`UPDATE` de datos: no se está resolviendo ninguna ambigüedad, solo se
+agregan valores nuevos al ENUM, así que ninguna fila existente se
+reinterpreta ni se reescribe. Diseño de esquema presentado a Codex ANTES
+de escribir el modelo o la migración (ver
+[estado-proyecto.md](estado-proyecto.md), "Decimoséptima corrección").
+Script: `backend/scripts/migrarRonda2Etapa7.js --confirmar` (lógica en
+`migracionRonda2Etapa7.js`, mismo patrón que `migracionCU04Ronda2.js`).
+Verificado contra `petshop_test` descartable con una venta histórica ya
+`'enviada'` cargada antes de migrar, confirmando que sobrevive intacta
+(no se reinterpreta), y aplicando la migración dos veces seguidas para
+confirmar idempotencia — ver `verificarMigracionRonda2Etapa7.js`. Aplicada
+ya contra `petshop_test` y `petshop_e2e` reales; pendiente para Mauro
+aplicarla contra `petshop_db` cuando decida actualizar su entorno de
+desarrollo (no se hizo acá — la regla de "nunca migrar `petshop_db`"
+sigue en pie).
+
+**Ronda 2, Etapa 8 (marketplace de vendedores independientes)**: la etapa
+de mayor riesgo de la ronda — dos `ALTER TABLE` aditivos sobre tablas
+existentes CON datos reales, más dos tablas nuevas. Diseño de esquema y
+autorización revisado con Codex en dos rondas (diseño, luego
+implementación) antes de escribir modelo o migración — ver
+[estado-proyecto.md](estado-proyecto.md), "Decimoctava corrección".
+`usuario.rol` se amplía con `'vendedor_independiente'` (ninguna cuenta
+`'vendedor'` existente cambia de significado); `producto.idTienda` es una
+columna nueva NULLABLE con FK hacia la tabla nueva `tienda` (NULL en toda
+fila existente). Script:
+`backend/scripts/migrarRonda2Etapa8.js --confirmar` (lógica en
+`migracionRonda2Etapa8.js`) — a diferencia de las migraciones anteriores,
+esta necesita que el backend ya se haya reiniciado una vez con el código
+de esta etapa (para que `sync()` cree `tienda`/`solicitudvendedor`, tablas
+nuevas) ANTES de correr la migración, que agrega la FK de
+`producto.idTienda` hacia `tienda` — el script lo detecta y aborta con un
+mensaje claro si se corre en el orden equivocado. Verificado contra
+`petshop_test` descartable con una cuenta `'vendedor'` y un producto
+históricos reales (ninguno se reinterpreta), aplicando la migración dos
+veces seguidas para confirmar idempotencia — ver
+`verificarMigracionRonda2Etapa8.js`. Aplicada ya contra `petshop_test` y
+`petshop_e2e` reales; pendiente para Mauro contra `petshop_db`.
+
+**Ronda 2, Etapa 9 (cierre)**: no agrega ningún cambio de esquema. Corrige
+los runners de migración, que decían falsamente que un fallo no dejaba
+cambios parciales: cada `ALTER TABLE` hace commit implícito. Ahora
+informan que la base puede haber quedado a medias, con consultas de
+inspección y el comando para reanudar. La migración de la Etapa 8 ahora
+reconoce una FK equivalente aunque tenga otro nombre, aborta sin tocar
+nada si `producto.idTienda` tiene un tipo incompatible, y ambas
+migraciones de ENUM abortan si el cambio fuera a perder valores. Se
+agregan `scripts/crearTablasNuevas.js` (tablas nuevas sin levantar el
+servidor) y `scripts/verificarEsquemaActual.js` (solo lectura). El
+procedimiento completo para actualizar una base existente (respaldo,
+orden exacto, verificación y recuperación) está en
+[actualizacion-base-existente.md](actualizacion-base-existente.md),
+ensayado de punta a punta en `petshop_test`.
+
 ## Tres esquemas distintos: no confundirlos
 
 Este documento distingue explícitamente tres cosas que **no son lo mismo**:
@@ -194,7 +309,7 @@ efectiva no es exactamente la esperada (`petshop_e2e`/`petshop_test`,
 mismos valores por defecto que los scripts de arriba, configurables con
 `E2E_DB_NAME_PERMITIDA`/`INTEGRACION_DB_NAME_PERMITIDA`). Verificado
 arrancando `npm run dev:e2e` de verdad: imprime `Base de datos efectiva:
-petshop_e2e` antes de sincronizar, y `npm test` (177/177) sigue sin
+petshop_e2e` antes de sincronizar, y `npm test` (236/236) sigue sin
 necesitar ninguna base real.
 
 **`GET /api/health/aislamiento`** (nuevo, separado de `/api/health`, que
@@ -381,6 +496,13 @@ cualquier base donde el backend arranque (desarrollo, o una futura
 "Base aislada para E2E" más abajo).
 
 ## Estado de la integración: no se declara cerrada
+
+> **Actualización (Etapa 9, 2026-09-27):** esta sección describe una
+> etapa temprana y ya no refleja el estado actual. El bloqueo de
+> privilegios se resolvió, y la suite de integración completa corre contra
+> `petshop_test` real: 147/147 en esta ronda (ver
+> [estado-proyecto.md](estado-proyecto.md)). Se conserva el texto original
+> como registro histórico.
 
 Ninguna de las pruebas de `test-integracion/` se ejecutó todavía contra
 datos reales en esta etapa (bloqueo de privilegios, ver arriba). Se

@@ -4,6 +4,7 @@ import {
   registrarVenta,
   cancelarVenta,
   marcarVentaComoEnviada,
+  marcarVentaComoEntregada,
 } from '../services/venta.service.js';
 
 const listar = async (req, res, next) => {
@@ -51,10 +52,20 @@ const marcarComoEnviada = async (req, res, next) => {
   }
 };
 
+const marcarComoEntregada = async (req, res, next) => {
+  try {
+    const venta = await marcarVentaComoEntregada(req.params.id);
+    res.status(200).json(venta);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   listar,
   buscarPorId,
   registrar,
   cancelar,
   marcarComoEnviada,
+  marcarComoEntregada,
 };

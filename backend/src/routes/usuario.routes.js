@@ -38,8 +38,15 @@ const limiteLogin = limitarIntentos({
   ventanaMs: 15 * 60 * 1000,
 });
 
+// Etapa 9: el techo de registro por IP también se puede relajar SOLO en
+// backend/.env.e2e (el E2E del vendedor independiente registra una cuenta
+// nueva por viewport y por corrida). Parser estricto (revisión de Codex): un
+// valor inválido o ausente deja el máximo de siempre (15), nunca otro.
+const enteroPositivoOPorDefecto = (valor, porDefecto) =>
+  /^[1-9]\d{0,5}$/.test(valor ?? '') ? Number(valor) : porDefecto;
+
 const limiteRegistroPorIp = limitarIntentos({
-  maximo: 15,
+  maximo: enteroPositivoOPorDefecto(process.env.LIMITE_REGISTRO_POR_IP, 15),
   ventanaMs: 60 * 60 * 1000,
   obtenerClave: claveSoloIp,
 });

@@ -10,3 +10,9 @@
   flex: 1;
   min-width: 180px;
 }
+
+.panel-ventas__aviso-solicitud {
+  color: #e8590c;
+  font-weight: 600;
+  font-size: 0.85rem;
+}

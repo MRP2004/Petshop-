@@ -43,8 +43,11 @@ test('capturas de solo lectura (no confirman ninguna compra)', async ({ page }, 
 
   // Agregar al carrito es solo estado local (React + localStorage): no
   // manda ninguna solicitud al backend, así que no escribe nada en la base.
+  // Selector específico (no ".locator('button')" a secas): desde la ronda 2,
+  // la tarjeta también tiene el botón de favorito (BotonFavorito.jsx), y un
+  // selector genérico resolvería a los dos botones.
   await page.goto('/catalogo');
-  await page.locator('.product-card').first().locator('button').click();
+  await page.locator('.product-card').first().getByRole('button', { name: 'Agregar al carrito 🛒' }).click();
   await page.goto('/carrito');
   await page.waitForSelector('.carrito__lista');
   await capturar('05-carrito.png');

@@ -1,0 +1,59 @@
+.cuenta-menu {
+  position: relative;
+}
+
+.cuenta-menu__boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  font: inherit;
+}
+
+.cuenta-menu__flecha {
+  font-size: 0.7rem;
+  transition: transform 0.15s ease;
+}
+
+.cuenta-menu__boton[aria-expanded='true'] .cuenta-menu__flecha {
+  transform: rotate(180deg);
+}
+
+.cuenta-menu__lista {
+  /* Sin margin-top respecto del botón (mismo motivo que NavDropdown.css: un
+     hueco ahí dispara mouseleave antes de que el mouse llegue al menú). A
+     la derecha (no a la izquierda, como NavDropdown): este menú es el
+     último elemento de la barra, abrir hacia la izquierda evita que se
+     salga del viewport en pantallas chicas. */
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin: 0;
+  padding: 12px 8px 8px;
+  min-width: 170px;
+  list-style: none;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: 12px;
+  box-shadow: var(--sombra-hover);
+  z-index: 30;
+}
+
+.cuenta-menu__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-texto);
+}
+
+.cuenta-menu__item:hover,
+.cuenta-menu__item:focus-visible {
+  background: var(--color-fondo);
+  color: var(--color-marca-oscuro);
+  outline: none;
+}

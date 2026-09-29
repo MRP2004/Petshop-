@@ -1,7 +1,6 @@
 .footer {
-  background: #212529;
-  color: #f1f3f5;
-  border-top: 4px solid var(--color-marca);
+  background: var(--color-texto);
+  color: #f4ede2;
   margin-top: 48px;
 }
 
@@ -9,20 +8,28 @@
   display: flex;
   flex-direction: column;
   gap: 28px;
-  padding: 36px 16px 20px;
+  padding: 40px 16px 22px;
 }
 
-.footer__columnas h3 {
-  color: var(--color-marca);
+.footer__marca h3 {
+  font-family: var(--fuente-titulo);
+  color: #9fd9bd;
   margin: 0 0 10px;
+  font-size: 1.3rem;
+}
+
+.footer__marca p {
+  max-width: 320px;
 }
 
 .footer__columnas h4 {
-  margin: 0 0 10px;
+  color: #f4ede2;
+  margin: 0 0 12px;
+  font-size: 0.95rem;
 }
 
 .footer__columnas p {
-  color: #adb5bd;
+  color: #b9cabb;
   font-size: 0.9rem;
   margin: 4px 0;
 }
@@ -31,28 +38,43 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  color: #adb5bd;
   font-size: 0.9rem;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+}
+
+.footer__columnas ul a {
+  color: #b9cabb;
+  font-weight: 600;
+}
+
+.footer__columnas ul a:hover {
+  color: #9fd9bd;
 }
 
 .footer__inferior {
-  border-top: 1px solid #343a40;
+  border-top: 1px solid #2c5245;
   padding: 16px;
   text-align: center;
   font-size: 0.8rem;
-  color: #868e96;
+  /* ~5.4:1 sobre el nuevo fondo oscuro --color-texto (ronda 2), por encima
+     de AA para texto normal (el tono anterior daba ~4.3:1 con este fondo). */
+  color: #9fb3a5;
 }
 
 @media (min-width: 768px) {
   .footer__columnas {
     flex-direction: row;
     justify-content: space-between;
+    flex-wrap: wrap;
   }
 
   .footer__columnas > div {
-    flex: 1;
+    flex: 1 1 160px;
+  }
+
+  .footer__marca {
+    flex: 1 1 260px;
   }
 }

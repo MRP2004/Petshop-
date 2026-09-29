@@ -12,6 +12,13 @@ import medioPagoRoutes from './routes/medioPago.routes.js';
 import ventaRoutes from './routes/venta.routes.js';
 import usuarioRoutes from './routes/usuario.routes.js';
 import promocionProductoRoutes from './routes/promocionProducto.routes.js';
+import compraRoutes from './routes/compra.routes.js';
+import solicitudCancelacionRoutes from './routes/solicitudCancelacion.routes.js';
+import georefRoutes from './routes/georef.routes.js';
+import favoritoRoutes from './routes/favorito.routes.js';
+import avisoRoutes from './routes/aviso.routes.js';
+import solicitudVendedorRoutes from './routes/solicitudVendedor.routes.js';
+import tiendaRoutes from './routes/tienda.routes.js';
 
 import {
   rutaNoEncontrada,
@@ -30,6 +37,17 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true,
+    // Content-Disposition (CU-04, ronda de correcciones): un defecto real,
+    // encontrado al agregar una prueba E2E que verifica la descarga
+    // efectiva del PDF del comprobante, no solo que el botón exista.
+    // Content-Disposition NO es un header "seguro" para CORS por defecto
+    // (a diferencia de Content-Type o Content-Length): sin exponerlo acá,
+    // el navegador SÍ lo recibía del servidor, pero JavaScript del frontend
+    // no podía leerlo con `response.headers.get(...)` en un pedido
+    // cross-origin (frontend y backend en puertos distintos) — la descarga
+    // funcionaba, pero siempre con el nombre de archivo genérico de
+    // respaldo del frontend, nunca con el número de comprobante real.
+    exposedHeaders: ['Content-Disposition'],
   }),
 );
 
@@ -107,6 +125,13 @@ app.use('/api/medios-pago', medioPagoRoutes);
 app.use('/api/ventas', ventaRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/promociones', promocionProductoRoutes);
+app.use('/api/compras', compraRoutes);
+app.use('/api/solicitudes-cancelacion', solicitudCancelacionRoutes);
+app.use('/api/georef', georefRoutes);
+app.use('/api/favoritos', favoritoRoutes);
+app.use('/api/avisos', avisoRoutes);
+app.use('/api/solicitudes-vendedor', solicitudVendedorRoutes);
+app.use('/api/tiendas', tiendaRoutes);
 
 app.use(rutaNoEncontrada);
 app.use(manejarErrores);

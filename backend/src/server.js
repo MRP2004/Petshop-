@@ -1,18 +1,7 @@
 import 'dotenv/config';
 import app from './app.js';
 import sequelize from './config/database.js';
-import './models/tipoMascota.model.js';
-import './models/categoria.model.js';
-import './models/proveedor.model.js';
-import './models/producto.model.js';
-import './models/cliente.model.js';
-import './models/medioPago.model.js';
-import './models/venta.model.js';
-import './models/detalleVenta.model.js';
-import './models/usuario.model.js';
-import './models/promocionProducto.model.js';
-import './models/direccionEntrega.model.js';
-import './models/imagenProducto.model.js';
+import './models/index.js';
 
 const PORT = process.env.PORT || 3000;
 const ENTORNO = process.env.ENTORNO || 'desarrollo';

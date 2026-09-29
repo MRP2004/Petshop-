@@ -4,6 +4,17 @@
 // valores arbitrarios (incluso 0). La corrección está en venta.service.js
 // (registrarVenta ignora esos dos campos cuando usuario.rol === 'cliente').
 //
+// Corrección posterior (revisión de Codex sobre el diff de CU-04): la ruta
+// POST /api/ventas pasó a ser exclusiva del personal (ver
+// routes/venta.routes.js) — un cliente que la llamaba directamente se
+// salteaba el checkout con pago simulado por completo. Los casos de acá
+// que antes probaban "un cliente manda X, se ignora" vía HTTP ahora llaman
+// a registrarVenta directamente (mismo criterio que
+// ventaEntradasInvalidas.test.js): registrarVenta conserva esa lógica
+// interna como defensa en profundidad, aunque ya no sea alcanzable desde
+// la ruta con un token de cliente — y ese "ya no alcanzable" se prueba
+// aparte, al final del archivo.
+//
 // A diferencia de los otros archivos "entradas inválidas" (que solo
 // ejercitan validación de forma, antes de tocar la base), acá hace falta
 // comprobar el *cálculo* del total, que depende del precio leído de
@@ -25,6 +36,7 @@ import Cliente from '../src/models/cliente.model.js';
 import MedioPago from '../src/models/medioPago.model.js';
 import Producto from '../src/models/producto.model.js';
 import DireccionEntrega from '../src/models/direccionEntrega.model.js';
+import { registrarVenta } from '../src/services/venta.service.js';
 import { tokenCliente, tokenVendedor, autorizacion } from './ayudaAutenticacion.js';
 
 const originales = {};
@@ -101,66 +113,77 @@ after(() => {
   DireccionEntrega.create = originales.direccionEntregaCreate;
 });
 
+const usuarioCliente7 = { idUsuario: 1001, rol: 'cliente', idCliente: 7 };
+
 test('un cliente que manda descuento igual al subtotal NO logra bajar el total (se ignora, no se aplica)', async () => {
-  const respuesta = await request(app)
-    .post('/api/ventas')
-    .set('Authorization', autorizacion(tokenCliente(7)))
-    .send({
+  const venta = await registrarVenta(
+    {
       idMedioPago: 1,
       detalles: [{ idProducto: 5, cantidad: 1 }],
       descuento: 100, // == el subtotal (precio 100 x cantidad 1)
-    })
-    .expect(201);
+    },
+    usuarioCliente7,
+  );
 
-  assert.equal(respuesta.body.total, '100.00');
+  assert.equal(venta.total, '100.00');
   assert.equal(ventaCreada.descuento, null);
 });
 
 test('un cliente que manda minimoMayorista lo ve ignorado (no se persiste)', async () => {
-  await request(app)
-    .post('/api/ventas')
-    .set('Authorization', autorizacion(tokenCliente(7)))
-    .send({
+  await registrarVenta(
+    {
       idMedioPago: 1,
       detalles: [{ idProducto: 5, cantidad: 1 }],
       minimoMayorista: 50,
-    })
-    .expect(201);
+    },
+    usuarioCliente7,
+  );
 
   assert.equal(ventaCreada.minimoMayorista, null);
 });
 
 test('envío a domicilio con dirección válida: se persiste el domicilio en su propia tabla, asociado a la venta', async () => {
+  const venta = await registrarVenta(
+    {
+      idMedioPago: 1,
+      detalles: [{ idProducto: 5, cantidad: 1 }],
+      metodoEntrega: 'envío a domicilio',
+      direccionEntrega: 'Av. Siempre Viva 742, Rosario',
+    },
+    usuarioCliente7,
+  );
+
+  assert.equal(ventaCreada.metodoEntrega, 'envío a domicilio');
+  assert.equal(direccionEntregaCreada.idVenta, ventaCreada.idVenta);
+  assert.equal(direccionEntregaCreada.direccion, 'Av. Siempre Viva 742, Rosario');
+  assert.equal(venta.direccionEntrega.direccion, 'Av. Siempre Viva 742, Rosario');
+});
+
+test('retiro en sucursal ignora cualquier dirección que se mande igual (no se crea fila de domicilio)', async () => {
+  await registrarVenta(
+    {
+      idMedioPago: 1,
+      detalles: [{ idProducto: 5, cantidad: 1 }],
+      metodoEntrega: 'retiro en sucursal',
+      direccionEntrega: 'Esto no debería guardarse',
+    },
+    usuarioCliente7,
+  );
+
+  assert.equal(direccionEntregaCreada, undefined);
+});
+
+test('POST /api/ventas con un token de cliente responde 403: la ruta es exclusiva del personal desde CU-04 (el cliente compra por /api/compras)', async () => {
   const respuesta = await request(app)
     .post('/api/ventas')
     .set('Authorization', autorizacion(tokenCliente(7)))
     .send({
       idMedioPago: 1,
       detalles: [{ idProducto: 5, cantidad: 1 }],
-      metodoEntrega: 'envío a domicilio',
-      direccionEntrega: 'Av. Siempre Viva 742, Rosario',
     })
-    .expect(201);
+    .expect(403);
 
-  assert.equal(ventaCreada.metodoEntrega, 'envío a domicilio');
-  assert.equal(direccionEntregaCreada.idVenta, ventaCreada.idVenta);
-  assert.equal(direccionEntregaCreada.direccion, 'Av. Siempre Viva 742, Rosario');
-  assert.equal(respuesta.body.direccionEntrega.direccion, 'Av. Siempre Viva 742, Rosario');
-});
-
-test('retiro en sucursal ignora cualquier dirección que se mande igual (no se crea fila de domicilio)', async () => {
-  await request(app)
-    .post('/api/ventas')
-    .set('Authorization', autorizacion(tokenCliente(7)))
-    .send({
-      idMedioPago: 1,
-      detalles: [{ idProducto: 5, cantidad: 1 }],
-      metodoEntrega: 'retiro en sucursal',
-      direccionEntrega: 'Esto no debería guardarse',
-    })
-    .expect(201);
-
-  assert.equal(direccionEntregaCreada, undefined);
+  assert.equal(respuesta.body.error, 'No tiene permisos para realizar esta acción');
 });
 
 test('el mismo descuento, mandado por un vendedor, SÍ se aplica (es un campo comercial legítimo para personal)', async () => {

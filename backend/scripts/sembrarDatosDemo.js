@@ -56,6 +56,26 @@ const sembrar = async () => {
     buscarOCrear(MedioPago, { nombre: 'Tarjeta de débito' }, { descripcion: 'Pago con tarjeta', habilitado: true }),
   ]);
 
+  // Medios de pago simulados del checkout de cliente (CU-04): compra.service.js
+  // los busca por este nombre exacto para vincularlos a la Venta — el
+  // cliente no los elige de esta lista, elige "transferencia" o "débito" y
+  // el backend resuelve cuál de estos dos usar (ver
+  // docs/cu04-checkout-pago.md). No aparecen en la carga manual del
+  // personal ni en el checkout salvo por su nombre; no representan ninguna
+  // pasarela real.
+  await Promise.all([
+    buscarOCrear(
+      MedioPago,
+      { nombre: 'Transferencia bancaria (simulada)' },
+      { descripcion: 'Simulación de transferencia — checkout de cliente, sin movimiento real de dinero', habilitado: true },
+    ),
+    buscarOCrear(
+      MedioPago,
+      { nombre: 'Débito (simulado)' },
+      { descripcion: 'Simulación de pago con débito — checkout de cliente, sin pasarela real', habilitado: true },
+    ),
+  ]);
+
   const productos = [
     {
       nombre: 'Alimento perro adulto 15kg',

@@ -34,15 +34,25 @@ const Usuario = sequelize.define(
       allowNull: false,
     },
 
+    // Ronda 2, Etapa 8 (marketplace): 'vendedor_independiente' agregado al
+    // final, ampliación aditiva del ENUM (ver
+    // backend/scripts/migracionRonda2Etapa8.js) — ninguna cuenta con
+    // rol='vendedor' cambia de significado ni de nivel de acceso; ese rol
+    // sigue significando personal interno con acceso global. Un vendedor
+    // independiente es una cuenta 'cliente' que fue aprobada para vender
+    // (ver tienda.service.js#resolverSolicitudVendedor) — a diferencia de
+    // vendedor/administrador, SÍ conserva su propio idCliente (ver más
+    // abajo): sigue siendo comprador además de vendedor.
     rol: {
-      type: DataTypes.ENUM('cliente', 'vendedor', 'administrador'),
+      type: DataTypes.ENUM('cliente', 'vendedor', 'administrador', 'vendedor_independiente'),
       allowNull: false,
       defaultValue: 'cliente',
     },
 
-    // Obligatorio y único cuando rol = 'cliente' (un usuario cliente
-    // representa exactamente a un Cliente); null para vendedor/administrador,
-    // que no tienen historial de compras propio.
+    // Obligatorio y único cuando rol = 'cliente' o 'vendedor_independiente'
+    // (las dos formas de "esta cuenta también compra"); null para
+    // vendedor/administrador (personal interno, sin historial de compras
+    // propio).
     idCliente: {
       type: DataTypes.INTEGER,
       allowNull: true,

@@ -1,0 +1,13 @@
+.solicitud-vendedor__ayuda {
+  color: var(--color-texto-suave);
+  max-width: 60ch;
+  margin-bottom: 20px;
+}
+
+.solicitud-vendedor__formulario {
+  max-width: 420px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}

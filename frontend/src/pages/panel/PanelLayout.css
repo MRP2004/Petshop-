@@ -19,12 +19,14 @@
   font-size: 0.88rem;
   font-weight: 600;
   color: var(--color-texto-suave);
-  border: 1px solid var(--color-borde);
+  border: 1px solid var(--color-borde-interactivo);
 }
 
 .panel-layout__enlace--activo {
-  background: var(--color-marca);
-  border-color: var(--color-marca);
+  /* marca-oscuro, no marca: texto blanco sobre --color-marca da ~3.48:1,
+     no llega a AA para texto normal (ver index.css). */
+  background: var(--color-marca-oscuro);
+  border-color: var(--color-marca-oscuro);
   color: #fff;
 }
 

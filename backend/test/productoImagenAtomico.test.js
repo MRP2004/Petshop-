@@ -27,6 +27,7 @@ import app from '../src/app.js';
 import sequelize from '../src/config/database.js';
 import Producto from '../src/models/producto.model.js';
 import ImagenProducto from '../src/models/imagenProducto.model.js';
+import Favorito from '../src/models/favorito.model.js';
 import { tokenVendedor, autorizacion } from './ayudaAutenticacion.js';
 
 const originales = {};
@@ -73,13 +74,14 @@ before(() => {
   originales.imagenCreate = ImagenProducto.create;
   originales.imagenFindByPk = ImagenProducto.findByPk;
   originales.imagenDestroy = ImagenProducto.destroy;
+  originales.favoritoDestroy = Favorito.destroy;
 
   // Cada llamada a sequelize.transaction usa un objeto de transacción
   // NUEVO y distinguible (no un objeto vacío compartido): así se puede
   // comprobar que todas las operaciones dentro de una misma llamada al
   // servicio reciben exactamente ESE objeto, y no uno de otra operación.
   sequelize.transaction = async (callback) => {
-    transaccionActual = { marca: Symbol('transaccion') };
+    transaccionActual = { marca: Symbol('transaccion'), LOCK: { UPDATE: 'UPDATE', SHARE: 'SHARE' } };
     return callback(transaccionActual);
   };
 
@@ -121,6 +123,15 @@ before(() => {
     imagenDestruida = true;
     return 1;
   };
+
+  // Mismo motivo que ImagenProducto.destroy (ronda 2, Etapa 5: eliminarProducto
+  // también borra los favoritos del producto antes de borrarlo, ver
+  // producto.service.js): sin este stub, el código real intentaría una
+  // consulta real contra la base con la transacción falsa de arriba.
+  Favorito.destroy = async (options) => {
+    registrarLlamada('Favorito.destroy', options);
+    return 0;
+  };
 });
 
 beforeEach(() => {
@@ -136,6 +147,7 @@ after(() => {
   ImagenProducto.create = originales.imagenCreate;
   ImagenProducto.findByPk = originales.imagenFindByPk;
   ImagenProducto.destroy = originales.imagenDestroy;
+  Favorito.destroy = originales.favoritoDestroy;
 });
 
 test('alta completa: producto e imagen se crean con la misma transacción', async () => {
@@ -226,10 +238,13 @@ test('borrado permitido: producto e imagen se eliminan con la misma transacción
   assert.equal(imagenDestruida, true);
 
   const borradoImagen = llamadasConTransaccion.find((l) => l.metodo === 'ImagenProducto.destroy');
+  const borradoFavorito = llamadasConTransaccion.find((l) => l.metodo === 'Favorito.destroy');
   const borradoProducto = llamadasConTransaccion.find((l) => l.metodo === 'producto.destroy');
   assert.ok(borradoImagen);
+  assert.ok(borradoFavorito);
   assert.ok(borradoProducto);
   assert.equal(borradoImagen.transaccionRecibida, borradoProducto.transaccionRecibida);
+  assert.equal(borradoFavorito.transaccionRecibida, borradoProducto.transaccionRecibida);
 });
 
 test('borrado bloqueado por ventas: producto.destroy falla y el error se propaga sin presentarse como éxito', async () => {
@@ -249,12 +264,19 @@ test('borrado bloqueado por ventas: producto.destroy falla y el error se propaga
   assert.notEqual(respuesta.status, 204);
 
   const borradoImagen = llamadasConTransaccion.find((l) => l.metodo === 'ImagenProducto.destroy');
+  const borradoFavorito = llamadasConTransaccion.find((l) => l.metodo === 'Favorito.destroy');
   const borradoProducto = llamadasConTransaccion.find((l) => l.metodo === 'producto.destroy');
   assert.ok(borradoImagen, 'ImagenProducto.destroy sí se había intentado (y "tenido éxito" en el stub)');
+  assert.ok(borradoFavorito, 'Favorito.destroy sí se había intentado (y "tenido éxito" en el stub)');
   assert.ok(borradoProducto, 'producto.destroy sí se había intentado (y fallado)');
   assert.equal(
     borradoImagen.transaccionRecibida,
     borradoProducto.transaccionRecibida,
     'ambos borrados debían compartir la misma transacción para que el rollback deshaga los dos juntos',
+  );
+  assert.equal(
+    borradoFavorito.transaccionRecibida,
+    borradoProducto.transaccionRecibida,
+    'los tres borrados debían compartir la misma transacción para que el rollback deshaga todo junto',
   );
 });

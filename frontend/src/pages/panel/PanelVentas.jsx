@@ -5,6 +5,7 @@ import useCargaDatos from '../../hooks/useCargaDatos.js';
 import ventasApi from '../../api/ventas.api.js';
 import clientesApi from '../../api/clientes.api.js';
 import proveedoresApi from '../../api/proveedores.api.js';
+import { etiquetaEstadoVenta } from '../../utils/estadosLegibles.js';
 import './PanelVentas.css';
 
 const formateador = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' });
@@ -75,18 +76,28 @@ const PanelVentas = () => {
                 <th>Cliente</th>
                 <th>Estado</th>
                 <th>Total</th>
+                <th>Solicitud de cancelación</th>
               </tr>
             </thead>
             <tbody>
-              {ventas.map((venta) => (
-                <tr key={venta.idVenta}>
-                  <td><Link to={`/panel/ventas/${venta.idVenta}`}>#{venta.idVenta}</Link></td>
-                  <td>{formateadorFecha.format(new Date(venta.fecha))}</td>
-                  <td>{venta.cliente?.nombre} {venta.cliente?.apellido}</td>
-                  <td>{venta.estado}</td>
-                  <td>{formateador.format(Number(venta.total))}</td>
-                </tr>
-              ))}
+              {ventas.map((venta) => {
+                // CU-04, corrección: visibilidad rápida de una solicitud
+                // pendiente sin tener que abrir cada venta una por una (ver
+                // VentaDetalle.jsx para aprobarla/rechazarla).
+                const tieneSolicitudPendiente = (venta.solicitudesCancelacion || []).some(
+                  (s) => s.estado === 'pendiente',
+                );
+                return (
+                  <tr key={venta.idVenta}>
+                    <td><Link to={`/panel/ventas/${venta.idVenta}`}>#{venta.idVenta}</Link></td>
+                    <td>{formateadorFecha.format(new Date(venta.fecha))}</td>
+                    <td>{venta.cliente?.nombre} {venta.cliente?.apellido}</td>
+                    <td>{etiquetaEstadoVenta(venta.estado)}</td>
+                    <td>{formateador.format(Number(venta.total))}</td>
+                    <td>{tieneSolicitudPendiente && <span className="panel-ventas__aviso-solicitud">Pendiente</span>}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

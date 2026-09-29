@@ -102,6 +102,14 @@ const AuthProvider = ({ children }) => {
     esCliente: usuario?.rol === 'cliente',
     esPersonal: usuario?.rol === 'vendedor' || usuario?.rol === 'administrador',
     esAdministrador: usuario?.rol === 'administrador',
+    // Ronda 2, Etapa 8 (marketplace): un vendedor independiente NO es
+    // "personal" (esPersonal sigue significando personal interno, con
+    // acceso global) — es una cuenta compradora que ADEMÁS vende. Sigue
+    // siendo comprador (conserva idCliente, ver backend/src/models/
+    // usuario.model.js): `esComprador` cubre las dos pantallas que ya
+    // existían para 'cliente' (checkout, favoritos, mis compras).
+    esVendedorIndependiente: usuario?.rol === 'vendedor_independiente',
+    esComprador: usuario?.rol === 'cliente' || usuario?.rol === 'vendedor_independiente',
     iniciarSesion,
     registrarse,
     cerrarSesion,

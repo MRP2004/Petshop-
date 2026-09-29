@@ -88,3 +88,61 @@ describe('httpClient - nombre de la cookie CSRF según el entorno', () => {
     expect(opcionesVistas.headers['X-CSRF-Token']).toBeUndefined();
   });
 });
+
+describe('httpClient - el límite de tiempo también cubre la lectura del cuerpo', () => {
+  // Corrección (revisión independiente): el límite anterior solo cubría
+  // hasta que llegaban los encabezados — un `fetch()` que resolvía rápido
+  // pero cuyo `.json()` nunca terminaba de leer el cuerpo se quedaba
+  // esperando para siempre. Esta prueba simula EXACTAMENTE ese caso:
+  // encabezados recibidos de inmediato (200, ok), pero `.json()` devuelve
+  // una promesa que solo se resuelve/rechaza si el signal se aborta —
+  // igual que un stream de verdad que nunca termina de llegar.
+  it('encabezados recibidos con cuerpo que queda detenido: se corta al vencer el límite, como un fallo de conexión recuperable', async () => {
+    vi.useFakeTimers();
+
+    let signalDelPedido;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url, opciones) => {
+        signalDelPedido = opciones.signal;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: { get: (nombre) => (nombre === 'content-type' ? 'application/json' : null) },
+          json: () =>
+            new Promise((resolve, reject) => {
+              signalDelPedido.addEventListener('abort', () => {
+                reject(new DOMException('The operation was aborted.', 'AbortError'));
+              });
+            }),
+        });
+      }),
+    );
+
+    const { solicitar, ErrorApi: ErrorApiImportado } = await import('./httpClient.js');
+    // El `.then(resolve, reject)` se engancha en la misma sincronía que la
+    // llamada a solicitar(), antes de avanzar el reloj: evita que Node vea
+    // un instante sin ningún handler enganchado a la promesa (que dispara
+    // una advertencia de "rechazo no manejado" ruidosa, aunque inofensiva,
+    // por la interacción entre temporizadores simulados y microtasks).
+    const resultado = solicitar('/compras/intentos/x').then(
+      (datos) => ({ resuelto: true, datos }),
+      (error) => ({ resuelto: false, error }),
+    );
+
+    // Deja que fetch() resuelva (microtask) antes de avanzar el reloj: el
+    // punto es que los ENCABEZADOS ya llegaron cuando arranca el timeout
+    // sobre la lectura del cuerpo, no que nunca haya habido respuesta.
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(15000);
+
+    const { resuelto, error } = await resultado;
+
+    expect(resuelto).toBe(false);
+    expect(error).toBeInstanceOf(ErrorApiImportado);
+    expect(error.status).toBe(0);
+    expect(error.message).toBe('No se pudo conectar con el servidor. Verificá tu conexión.');
+
+    vi.useRealTimers();
+  });
+});

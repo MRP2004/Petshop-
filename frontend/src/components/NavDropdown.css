@@ -1,0 +1,77 @@
+.nav-dropdown {
+  position: relative;
+  display: none;
+}
+
+.nav-dropdown__boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--color-texto);
+  padding: 8px 2px;
+}
+
+.nav-dropdown__boton:hover,
+.nav-dropdown[data-abierto='true'] .nav-dropdown__boton {
+  color: var(--color-marca-oscuro);
+}
+
+.nav-dropdown__flecha {
+  font-size: 0.7rem;
+  transition: transform 0.15s ease;
+}
+
+.nav-dropdown__menu {
+  /* Sin separación (margin-top) respecto del botón: un hueco ahí dispara
+     mouseleave del contenedor (ver NavDropdown.jsx) antes de que el mouse
+     llegue al menú, cerrándolo de golpe al bajar en línea recta — hallazgo
+     real de la revisión de Codex de esta ronda (ver estado-proyecto.md).
+     El padding-top de acá adentro da el mismo respiro visual sin ese hueco
+     muerto. */
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin: 0;
+  padding: 12px 8px 8px;
+  min-width: 200px;
+  list-style: none;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: 12px;
+  box-shadow: var(--sombra-hover);
+  z-index: 30;
+}
+
+.nav-dropdown__item {
+  display: block;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-texto);
+}
+
+.nav-dropdown__item:hover,
+.nav-dropdown__item:focus-visible {
+  background: var(--color-fondo);
+  color: var(--color-marca-oscuro);
+  outline: none;
+}
+
+.nav-dropdown__item--todo {
+  color: var(--color-marca-oscuro);
+  border-bottom: 1px solid var(--color-borde);
+  border-radius: 8px 8px 0 0;
+  margin-bottom: 4px;
+}
+
+@media (min-width: 768px) {
+  .nav-dropdown {
+    display: block;
+  }
+}

@@ -8,6 +8,20 @@
   margin: 0 0 14px;
 }
 
+.mi-cuenta__direccion {
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.mi-cuenta__direccion p {
+  margin: 0 0 6px;
+}
+
+.mi-cuenta__direccion-indicaciones {
+  color: var(--color-texto-suave);
+  font-size: 0.9rem;
+}
+
 .mi-cuenta__lista {
   list-style: none;
   margin: 0;
@@ -39,9 +53,18 @@
   color: #7a5b00;
 }
 
-.mi-cuenta__estado--enviada {
+.mi-cuenta__estado--enviada,
+.mi-cuenta__estado--lista_para_retirar {
   background: #d3f9d8;
   color: #2b8a3e;
+}
+
+/* Estado final real (Ronda 2, Etapa 7) — un verde más marcado que
+   "enviada"/"lista para retirar" (en curso) para distinguir "ya terminó"
+   de "en camino". */
+.mi-cuenta__estado--entregada {
+  background: #2b8a3e;
+  color: #fff;
 }
 
 .mi-cuenta__estado--cancelada {

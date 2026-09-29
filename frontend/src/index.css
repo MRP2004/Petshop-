@@ -1,24 +1,66 @@
-/* Sistema de diseño base de PetShop: variables de color/espaciado y reset
-   mínimo. El resto de los estilos vive junto a cada componente/página
+/* Sistema de diseño base de PetShop: variables de color/espaciado/tipografía y
+   reset mínimo. El resto de los estilos vive junto a cada componente/página
    (mismo nombre de archivo, .css), mobile-first: las reglas base son para
    pantallas chicas y los @media (min-width: ...) agregan/ajustan para
    tablet (MD) y escritorio (LG). Breakpoints usados en todo el frontend:
-   SM (por defecto, < 768px), MD (>= 768px), LG (>= 1024px). */
+   SM (por defecto, < 768px), MD (>= 768px), LG (>= 1024px).
+
+   Identidad visual (ronda 2 de rediseño, ver docs/frontend-diseno.md): misma
+   base que la ronda 1 (verde para acciones/precios, terracota reservado
+   exclusivamente para promociones vigentes) pero con fondo y texto más
+   verdes y menos marrones ("más verde y cálida" — pedido explícito de esta
+   ronda): fondo principal --color-fondo, un tono aún más suave
+   --color-fondo-suave para separar secciones sin usar bordes, tarjetas en
+   blanco/--color-superficie, texto en un verde oscuro (--color-texto) en
+   vez del marrón de la ronda 1. Baloo 2 para títulos, Manrope para el
+   cuerpo, cargadas desde Google Fonts en index.html con pila de reserva del
+   sistema si no llegan a cargar.
+
+   Cada color de acento tiene una variante "-oscuro" pensada para texto o
+   fondos sólidos con texto blanco encima (contraste real medido, no a
+   ojo — ver revisión de Codex en docs/estado-proyecto.md): blanco sobre
+   --color-marca da ~3.48:1 (no llega a AA para texto normal), blanco sobre
+   --color-marca-oscuro da ~5:1 (sí); blanco/texto sobre --color-acento da
+   ~3.12:1, sobre --color-acento-oscuro da ~4.64:1. La variante clara
+   (--color-marca, --color-acento) queda para texto sobre fondos claros
+   donde ya da buen contraste (precios, chips de promoción sobre
+   --color-acento-suave) o para superficies grandes sin texto encima.
+   --color-texto-suave y --color-borde se recalcularon para esta ronda
+   contra el nuevo fondo verde (texto-suave ~5.9:1 sobre --color-fondo y
+   ~6.5:1 sobre blanco, ambos por encima de AA para texto normal).
+
+   --color-borde-interactivo (hallazgo real de la revisión de Codex de esta
+   ronda, ver docs/estado-proyecto.md): --color-borde por sí solo no llega
+   a 3:1 contra blanco/--color-fondo/--color-fondo-suave (da ~1.4-1.65:1),
+   suficiente para un borde decorativo (tarjetas con sombra, separadores)
+   pero no para WCAG 1.4.11 en un control donde el borde es lo único que
+   marca el límite interactivo (inputs, píldoras de filtro/categoría
+   clicables, enlaces del panel). --color-borde-interactivo da ~3.3-4:1
+   contra esos mismos fondos y se usa solo en esos casos; el resto sigue
+   con --color-borde. */
 :root {
-  --color-marca: #0ca678;
-  --color-marca-oscuro: #087f5b;
-  --color-acento: #228be6;
-  --color-peligro: #e03131;
-  --color-texto: #212529;
-  --color-texto-suave: #495057;
-  --color-borde: #dee2e6;
-  --color-fondo: #f8f9fa;
+  --color-marca: #3c9a6e;
+  --color-marca-oscuro: #2f7d59;
+  --color-acento: #d97757;
+  --color-acento-oscuro: #ae5f46;
+  --color-acento-suave: #f7e4dc;
+  --color-peligro: #c0392b;
+  --color-texto: #193d2e;
+  --color-texto-suave: #4b6358;
+  --color-borde: #afd2ba;
+  --color-borde-interactivo: #4f8a6c;
+  --color-fondo: #eef6f0;
+  --color-fondo-suave: #e3f0e8;
   --color-superficie: #ffffff;
-  --radio-borde: 8px;
-  --sombra: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --radio-borde: 14px;
+  --radio-pildora: 999px;
+  --sombra: 0 4px 18px rgba(43, 36, 32, 0.08);
+  --sombra-hover: 0 8px 24px rgba(43, 36, 32, 0.12);
   --ancho-contenido: 1200px;
   --breakpoint-md: 768px;
   --breakpoint-lg: 1024px;
+  --fuente-titulo: 'Baloo 2', 'Segoe UI', system-ui, sans-serif;
+  --fuente-cuerpo: 'Manrope', 'Segoe UI', system-ui, sans-serif;
 }
 
 * {
@@ -27,9 +69,17 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--fuente-cuerpo);
   color: var(--color-texto);
   background: var(--color-fondo);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--fuente-titulo);
+  font-weight: 700;
 }
 
 a {
@@ -40,6 +90,8 @@ a {
 button {
   font-family: inherit;
   cursor: pointer;
+  border: none;
+  background: none;
 }
 
 input,
@@ -61,11 +113,11 @@ textarea {
   justify-content: center;
   gap: 6px;
   border: none;
-  border-radius: var(--radio-borde);
-  padding: 10px 18px;
+  border-radius: var(--radio-pildora);
+  padding: 11px 22px;
   font-size: 0.95rem;
-  font-weight: 600;
-  transition: opacity 0.15s ease;
+  font-weight: 700;
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
 .boton:disabled {
@@ -74,11 +126,14 @@ textarea {
 }
 
 .boton:not(:disabled):hover {
-  opacity: 0.9;
+  opacity: 0.92;
+  transform: translateY(-1px);
 }
 
 .boton-primario {
-  background: var(--color-marca);
+  /* marca-oscuro, no marca: texto blanco sobre el verde claro da ~3.48:1
+     (falla WCAG AA para texto normal); sobre marca-oscuro da ~5:1. */
+  background: var(--color-marca-oscuro);
   color: #fff;
 }
 
@@ -95,8 +150,9 @@ textarea {
 
 .boton-enlace {
   background: transparent;
-  color: var(--color-acento);
+  color: var(--color-marca-oscuro);
   padding: 0;
+  font-weight: 700;
 }
 
 .campo {
@@ -116,8 +172,17 @@ textarea {
 .campo select,
 .campo textarea {
   padding: 10px 12px;
-  border: 1px solid var(--color-borde);
-  border-radius: var(--radio-borde);
+  border: 1px solid var(--color-borde-interactivo);
+  border-radius: 10px;
+  background: var(--color-superficie);
+  color: var(--color-texto);
+}
+
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus {
+  outline: 2px solid var(--color-marca);
+  outline-offset: 1px;
 }
 
 .tarjeta {
@@ -133,12 +198,12 @@ textarea {
 }
 
 .titulo-pagina {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   margin: 0 0 20px;
 }
 
 @media (min-width: 768px) {
   .titulo-pagina {
-    font-size: 1.9rem;
+    font-size: 2rem;
   }
 }
