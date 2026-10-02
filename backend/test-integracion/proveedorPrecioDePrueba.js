@@ -1,13 +1,6 @@
-// Proveedor de precios CONTROLADO, exclusivo de las pruebas de integración
-// (CU-04, §4: "si su implementación aún no está disponible, dejen un
-// proveedor de precios sin promoción detrás del contrato, con pruebas de
-// integración usando un proveedor controlado"). No representa ninguna regla
-// real de superposición/acumulación de José — eso sigue sin confirmarse,
-// ver promocionProducto.model.js — solo permite simular, de forma
-// determinista, que un producto tiene o no una promoción vigente, para
-// probar el circuito completo de compra.service.js (cotizar, comparar
-// contra la cotización aceptada, aplicar el descuento) sin depender de que
-// esas reglas existan todavía.
+// Proveedor controlado exclusivo de las pruebas de integración de CU-04.
+// Permite simular precios con y sin promoción de forma determinista para
+// probar el checkout independientemente de las reglas de producción.
 import { validarImportePersistido } from '../src/utils/ventaValidaciones.js';
 
 // promocionesPorProducto: Map<idProducto, { idPromocionProducto, porcentajeDescuento }>

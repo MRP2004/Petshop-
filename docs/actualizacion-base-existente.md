@@ -105,6 +105,25 @@ Todo debe decir `OK` y el script termina con código 0. Después:
    panel las cuentas `vendedor` existentes siguen entrando como personal
    interno (ninguna se convirtió en otra cosa).
 
+### Migración adicional de promociones
+
+La migración inicial ya no alcanza para el esquema de promociones actualizado:
+`promocionproducto.idCategoria` dejó de usarse porque cada promoción apunta a
+un producto concreto. Después de respaldar la base y detener el backend,
+ejecutá desde `backend/`:
+
+```powershell
+node scripts/migrarPromociones.js
+node scripts/migrarPromociones.js --confirmar
+node scripts/verificarEsquemaActual.js
+```
+
+El primer comando solo confirma la base y el usuario conectados. El segundo
+elimina la columna y cualquier FK asociada; los valores de categoría que
+existieran en esa columna se descartan. La operación es idempotente, pero el
+`ALTER TABLE` de MySQL no se revierte con una transacción: hacé un respaldo
+antes de confirmar.
+
 ## Si algo falla
 
 Un fallo **puede dejar la base aplicada a medias**: los pasos anteriores (y

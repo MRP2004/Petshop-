@@ -33,8 +33,9 @@ No reemplaza ni cambia el comportamiento de:
   (revertir el pago simulado si existe), sin tocar su lógica de stock ni de
   permisos.
 - **Envío** (`marcarVentaComoEnviada`): sin cambios.
-- **CRUD de `PromocionProducto`**: sin cambios; sus reglas de aplicación
-  siguen sin confirmar (ver "Contrato de precios para José" más abajo).
+- **Promociones**: ahora se aplican al precio tanto en checkout como en
+  ventas manuales; las reglas y el cálculo compartido se documentan en
+  [promociones.md](promociones.md).
 
 ## 1. Qué quedó funcionando
 
@@ -91,8 +92,8 @@ existentes, así que **no hizo falta ningún `ALTER TABLE`** — ver sección 4.
 Backend nuevo (ronda 1):
 
 - `src/models/{pago,comprobante,detalleVentaPromocion,intentoCompra}.model.js`
-- `src/services/precios/proveedorPrecioSinPromocion.service.js` — contrato
-  de precios (ver sección 3).
+- `src/services/precios/proveedorPrecioConPromocion.service.js` — cálculo
+  de precios promocionales compartido (ver sección 3).
 - `src/services/cotizacion.service.js` — cotiza contra la base real, con o
   sin transacción/bloqueo según quién lo llame.
 - `src/services/pagoSimulado.service.js` — transferencia (siempre
@@ -216,10 +217,10 @@ Frontend modificado (ronda 2):
   que el cuerpo terminó de leerse o falló); un abort durante la lectura del
   cuerpo se reporta igual que cualquier otro fallo de conexión recuperable.
 
-## 3. Contrato de precios para José
+## 3. Contrato de precios y aplicación de promociones
 
 `obtenerPrecioVigente(producto, contexto)` (async), en
-`backend/src/services/precios/proveedorPrecioSinPromocion.service.js`,
+`backend/src/services/precios/proveedorPrecioConPromocion.service.js`,
 recibe:
 
 - `producto`: una instancia de `Producto` ya leída (y bloqueada, si
@@ -230,7 +231,7 @@ recibe:
 Y devuelve el precio vigente de **una unidad**, en **centavos enteros**:
 
 ```js
-// Sin promoción (implementación actual, por defecto):
+// Sin promoción vigente:
 {
   precioListaCentavos: 1000000,   // $10.000,00
   idPromocionProducto: null,
@@ -239,7 +240,7 @@ Y devuelve el precio vigente de **una unidad**, en **centavos enteros**:
   precioFinalCentavos: 1000000,
 }
 
-// Con promoción (forma que debería devolver tu implementación):
+// Con promoción vigente:
 {
   precioListaCentavos: 1000000,   // $10.000,00
   idPromocionProducto: 7,
@@ -282,29 +283,12 @@ un proveedor que las viola responde 500, no se deja pasar):
   resultado dependa del orden en que se procesó cada producto.
 
 **Punto único de configuración**: `cotizacion.service.js` importa el
-proveedor activo desde `precios/proveedorPrecioActual.js` — hoy ese
-archivo re-exporta el proveedor sin promoción; para enchufar tu
-implementación real, editá ESE archivo (una sola línea), sin tocar
-`cotizacion.service.js` ni `compra.service.js`. El mismo archivo alimenta
-tanto la cotización de solo lectura como la confirmación — no hay dos
-puntos de configuración por separado. Las pruebas de integración inyectan
-un tercer proveedor, controlado, vía el parámetro `proveedorPrecios` (ver
-`test-integracion/proveedorPrecioDePrueba.js`), sin tocar el archivo de
-configuración.
-
-**No se implementaron reglas de superposición/acumulación de
-promociones** — siguen sin confirmar (ver `promocionProducto.model.js`) —
-por eso el proveedor por defecto no aplica ninguna promoción real todavía,
-aunque el resto del circuito (cotizar, comparar contra lo aceptado,
-aplicar el descuento, guardarlo como histórico) ya está probado de punta a
-punta con un proveedor de prueba controlado, incluida la propagación
-correcta de `transaction`/`instanteEvaluacion` (ver
-`test-integracion/compra.integracion.js`, "el proveedor de precios recibe
-la transacción activa y el MISMO instante de evaluación").
-
-**No interpretamos el campo `PromocionProducto.descuento` como
-porcentaje automáticamente** — mantiene la reserva ya documentada en
-`promocionProducto.model.js`.
+proveedor activo desde `precios/proveedorPrecioActual.js`. Este proveedor
+busca la promoción vigente del producto para el día calendario de Argentina.
+El mismo cálculo se usa en el checkout y en la cotización/registro de ventas
+manuales. El descuento se calcula en centavos enteros y se redondea al
+centavo más cercano, con medios centavos hacia arriba. Ver
+[promociones.md](promociones.md) para reglas, concurrencia e historial.
 
 **Reconfirmación por cambio de desglose (ronda 2)**: la comparación contra
 la cotización aceptada (`compra.service.js#cotizacionEstaDesactualizada`)

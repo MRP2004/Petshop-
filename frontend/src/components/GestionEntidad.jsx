@@ -225,6 +225,8 @@ const GestionEntidad = ({ titulo, servicio, campos, columnas, idCampo, renderAcc
                           : 'text'
                     }
                     step={campo.tipo === 'decimal' ? '0.01' : undefined}
+                    min={campo.min}
+                    max={campo.max}
                     value={formulario[campo.nombre] ?? ''}
                     onChange={actualizarCampo(campo.nombre)}
                     required={campo.requerido}

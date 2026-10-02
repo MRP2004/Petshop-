@@ -79,6 +79,16 @@ const ejecutar = async () => {
   );
   chequear('migrarRonda2Etapa8.js', 'FK producto.idTienda → tienda.idTienda', fk.length === 1, fk.map((f) => f.nombre).join(', '));
 
+  if (tablas.has('promocionproducto')) {
+    const categoriaPromocion = await tipoColumna('promocionproducto', 'idCategoria');
+    chequear(
+      'migrarPromociones.js',
+      'Columna promocionproducto.idCategoria eliminada',
+      categoriaPromocion === null,
+      categoriaPromocion ? 'todavía existe' : '',
+    );
+  }
+
   for (const r of resultados) {
     console.log(`${r.ok ? 'OK       ' : 'PENDIENTE'}  [${r.paso}] ${r.descripcion}${r.detalle && !r.ok ? ` — actual: ${r.detalle}` : ''}`);
   }

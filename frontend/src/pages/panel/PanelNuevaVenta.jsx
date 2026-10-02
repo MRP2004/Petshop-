@@ -15,7 +15,7 @@ const LONGITUD_MINIMA_DIRECCION = 8;
 // endpoint y las mismas reglas de negocio que la compra pública
 // (POST /api/ventas -> registrarVenta): la única diferencia la decide el
 // backend según el rol del token, acá no se duplica ninguna regla de
-// precio/stock/descuento.
+// precio promocional; el descuento manual se aplica después al subtotal.
 const PanelNuevaVenta = () => {
   const navegar = useNavigate();
   const [clientes, setClientes] = useState([]);
@@ -31,6 +31,9 @@ const PanelNuevaVenta = () => {
   const [idProductoSeleccionado, setIdProductoSeleccionado] = useState('');
   const [cantidadSeleccionada, setCantidadSeleccionada] = useState(1);
   const [lineas, setLineas] = useState([]); // [{producto, cantidad}]
+  const [cotizacion, setCotizacion] = useState(null);
+  const [errorCotizacion, setErrorCotizacion] = useState(null);
+  const [descuentoManual, setDescuentoManual] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
 
@@ -45,6 +48,33 @@ const PanelNuevaVenta = () => {
       .finally(() => setCargando(false));
   }, []);
 
+  useEffect(() => {
+    if (lineas.length === 0) {
+      return undefined;
+    }
+
+    let vigente = true;
+
+    ventasApi
+      .cotizar(lineas.map((linea) => ({
+        idProducto: linea.producto.idProducto,
+        cantidad: linea.cantidad,
+      })))
+      .then((resultado) => {
+        if (vigente) setCotizacion(resultado);
+      })
+      .catch((err) => {
+        if (vigente) {
+          setCotizacion(null);
+          setErrorCotizacion(err.message);
+        }
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, [lineas]);
+
   const agregarLinea = () => {
     if (!idProductoSeleccionado || cantidadSeleccionada <= 0) return;
     const producto = productos.find((p) => p.idProducto === Number(idProductoSeleccionado));
@@ -54,19 +84,34 @@ const PanelNuevaVenta = () => {
       const sinRepetir = actual.filter((l) => l.producto.idProducto !== producto.idProducto);
       return [...sinRepetir, { producto, cantidad: cantidadSeleccionada }];
     });
+    setCotizacion(null);
+    setErrorCotizacion(null);
   };
 
   const quitarLinea = (idProducto) => {
     setLineas((actual) => actual.filter((l) => l.producto.idProducto !== idProducto));
+    setCotizacion(null);
+    setErrorCotizacion(null);
   };
 
-  const total = lineas.reduce((acc, l) => acc + Number(l.producto.precio) * l.cantidad, 0);
+  const descuentoManualCentavos = Math.round((Number(descuentoManual) || 0) * 100);
+  const subtotalCentavos = cotizacion?.totalCentavos ?? 0;
+  const descuentoManualInvalido = descuentoManualCentavos > subtotalCentavos;
+  const totalCentavos = subtotalCentavos - descuentoManualCentavos;
   const esEnvioADomicilio = metodoEntrega === 'envío a domicilio';
   const direccionInvalida = esEnvioADomicilio && direccionEntrega.trim().length < LONGITUD_MINIMA_DIRECCION;
 
   const confirmar = async (evento) => {
     evento.preventDefault();
-    if (enviando || lineas.length === 0 || !idCliente || !idMedioPago || direccionInvalida) return;
+    if (
+      enviando ||
+      lineas.length === 0 ||
+      !cotizacion ||
+      descuentoManualInvalido ||
+      !idCliente ||
+      !idMedioPago ||
+      direccionInvalida
+    ) return;
 
     setEnviando(true);
     setError(null);
@@ -77,6 +122,7 @@ const PanelNuevaVenta = () => {
         idMedioPago: Number(idMedioPago),
         metodoEntrega,
         direccionEntrega: esEnvioADomicilio ? direccionEntrega.trim() : undefined,
+        descuento: (descuentoManualCentavos / 100).toFixed(2),
         detalles: lineas.map((l) => ({ idProducto: l.producto.idProducto, cantidad: l.cantidad })),
       });
       navegar(`/panel/ventas/${venta.idVenta}`);
@@ -163,26 +209,74 @@ const PanelNuevaVenta = () => {
 
         {lineas.length > 0 && (
           <ul className="panel-nueva-venta__lineas">
-            {lineas.map((l) => (
-              <li key={l.producto.idProducto}>
-                <span>{l.cantidad} × {l.producto.nombre}</span>
-                <strong>{formateador.format(Number(l.producto.precio) * l.cantidad)}</strong>
-                <button type="button" className="boton-enlace" onClick={() => quitarLinea(l.producto.idProducto)}>
-                  Quitar
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+            {lineas.map((l) => {
+              const cotizacionLinea = cotizacion?.lineas.find(
+                (linea) => linea.idProducto === l.producto.idProducto,
+              );
 
-        <p className="panel-nueva-venta__total">Total: {formateador.format(total)}</p>
+              return (
+                  <li key={l.producto.idProducto}>
+                    <span>
+                      {l.cantidad} × {l.producto.nombre}
+                      {cotizacionLinea?.montoDescuentoCentavos > 0 && (
+                        <> (promoción: -{formateador.format(
+                          (cotizacionLinea.montoDescuentoCentavos * l.cantidad) / 100,
+                        )})</>
+                      )}
+                    </span>
+                    <strong>
+                      {cotizacionLinea
+                        ? formateador.format(cotizacionLinea.subtotalCentavos / 100)
+                        : '—'}
+                    </strong>
+                    <button type="button" className="boton-enlace" onClick={() => quitarLinea(l.producto.idProducto)}>
+                      Quitar
+                    </button>
+                  </li>
+              );
+            })}
+              </ul>
+            )}
+
+            {lineas.length > 0 && !cotizacion && !errorCotizacion && <p>Calculando precios y promociones…</p>}
+            {errorCotizacion && <EstadoError mensaje={errorCotizacion} />}
+
+            {lineas.length > 0 && cotizacion && (
+              <>
+                <p>Subtotal con promociones: {formateador.format(subtotalCentavos / 100)}</p>
+                <div className="campo">
+                  <label htmlFor="descuentoManual">Descuento manual ($)</label>
+                  <input
+                    id="descuentoManual"
+                    type="number"
+                    min="0"
+                    max={(subtotalCentavos / 100).toFixed(2)}
+                    step="0.01"
+                    value={descuentoManual}
+                    onChange={(evento) => setDescuentoManual(evento.target.value)}
+                  />
+                  {descuentoManualInvalido && (
+                    <span>El descuento manual no puede superar el subtotal con promociones.</span>
+                  )}
+                </div>
+                <p className="panel-nueva-venta__total">Total: {formateador.format(totalCentavos / 100)}</p>
+              </>
+            )}
 
         {error && <EstadoError mensaje={error} />}
 
         <button
           type="submit"
           className="boton boton-primario"
-          disabled={enviando || lineas.length === 0 || !idCliente || !idMedioPago || direccionInvalida}
+          disabled={
+            enviando ||
+            lineas.length === 0 ||
+            !cotizacion ||
+            descuentoManualInvalido ||
+            !idCliente ||
+            !idMedioPago ||
+            direccionInvalida
+          }
         >
           {enviando ? 'Registrando…' : 'Registrar venta'}
         </button>

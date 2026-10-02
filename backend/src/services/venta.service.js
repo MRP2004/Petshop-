@@ -12,16 +12,13 @@ import DetalleVentaPromocion from '../models/detalleVentaPromocion.model.js';
 import SolicitudCancelacion from '../models/solicitudCancelacion.model.js';
 import AppError from '../errors/AppError.js';
 import { notificarClientePorIdCliente, notificarTiendasParticipantes, TIPOS_AVISO } from './aviso.service.js';
-import { verificarTiendasActivas } from './disponibilidadTienda.js';
+import { cotizar } from './cotizacion.service.js';
 import { prepararEnteroOpcional } from '../utils/validacion.js';
 import {
   MAXIMO_ENTERO_POSITIVO,
   esObjetoPlano,
   validarEnteroPositivo,
   prepararImporteOpcional,
-  validarImportePersistido,
-  calcularSubtotalCentavos,
-  acumularSubtotalGeneral,
   calcularTotalCentavos,
   prepararDetalles,
   prepararEntrega,
@@ -275,70 +272,11 @@ const registrarVenta = async (datos, usuario) => {
         );
       }
 
-      const detallesCalculados = [];
-      let subtotalGeneralCentavos = 0;
-
-      for (const detalle of detallesPreparados) {
-        const producto = await Producto.findByPk(
-          detalle.idProducto,
-          {
-            transaction,
-            lock: transaction.LOCK.UPDATE,
-          },
-        );
-
-        if (!producto) {
-          throw new AppError(
-            `El producto ${detalle.idProducto} no existe`,
-            400,
-          );
-        }
-
-        if (producto.stockActual < detalle.cantidad) {
-          throw new AppError(
-            `Stock insuficiente para el producto ${producto.nombre}`,
-            409,
-          );
-        }
-
-        // El precio ya se valida al crear/editar el producto, pero la venta no
-        // puede depender exclusivamente de esa validación ajena: se vuelve a
-        // comprobar lo que efectivamente se leyó de la base en este momento.
-        const precioCentavos = validarImportePersistido(
-          producto.precio,
-          `El precio del producto ${producto.nombre} almacenado no es válido`,
-        );
-
-        // Cada subtotal se valida contra el máximo de su propia columna, sin
-        // importar si un descuento posterior podría dejar el total por debajo:
-        // el subtotal se persiste igual en su propia fila de DetalleVenta.
-        const subtotalCentavos = calcularSubtotalCentavos(
-          precioCentavos,
-          detalle.cantidad,
-          `El subtotal del producto ${producto.nombre} no puede calcularse de forma segura`,
-          `El subtotal del producto ${producto.nombre} supera el máximo permitido`,
-        );
-
-        subtotalGeneralCentavos = acumularSubtotalGeneral(
-          subtotalGeneralCentavos,
-          subtotalCentavos,
-          'El importe acumulado de la venta es demasiado grande para procesarse',
-        );
-
-        detallesCalculados.push({
-          producto,
-          cantidad: detalle.cantidad,
-          precioCentavos,
-          subtotalCentavos,
-        });
-      }
-
-      // Etapa 9: mismo control que el checkout, después de bloquear todos los
-      // productos (orden producto → tienda, ver disponibilidadTienda.js).
-      const tiendasPorId = await verificarTiendasActivas(
-        detallesCalculados.map((detalle) => detalle.producto),
-        { transaction },
-      );
+      // El checkout y las ventas manuales pasan por el mismo cálculo de
+      // precios: así ambos aplican promociones vigentes con idénticas reglas.
+      const cotizacion = await cotizar(detallesPreparados, { transaction });
+      const detallesCalculados = cotizacion.lineas;
+      const subtotalGeneralCentavos = cotizacion.totalCentavos;
 
       const totalCentavos = calcularTotalCentavos(
         subtotalGeneralCentavos,
@@ -384,28 +322,37 @@ const registrarVenta = async (datos, usuario) => {
         );
       }
 
-      for (const detalle of detallesCalculados) {
-        await DetalleVenta.create(
+      for (const linea of detallesCalculados) {
+        const detalleVenta = await DetalleVenta.create(
           {
-            cantidad: detalle.cantidad,
-            precioUnitario: (
-              detalle.precioCentavos / 100
-            ).toFixed(2),
-            subtotal: (
-              detalle.subtotalCentavos / 100
-            ).toFixed(2),
+            cantidad: linea.cantidad,
+            precioUnitario: (linea.precioFinalCentavos / 100).toFixed(2),
+            subtotal: (linea.subtotalCentavos / 100).toFixed(2),
             idVenta: venta.idVenta,
-            idProducto: detalle.producto.idProducto,
+            idProducto: linea.idProducto,
           },
           {
             transaction,
           },
         );
 
-        await detalle.producto.update(
+        if (linea.idPromocionProducto !== null) {
+          await DetalleVentaPromocion.create(
+            {
+              idDetalleVenta: detalleVenta.idDetalleVenta,
+              nombreProductoHistorico: linea.nombre,
+              precioListaUnitario: (linea.precioListaCentavos / 100).toFixed(2),
+              idPromocionProducto: linea.idPromocionProducto,
+              porcentajeDescuento: linea.porcentajeDescuento,
+              montoDescuentoUnitario: (linea.montoDescuentoCentavos / 100).toFixed(2),
+            },
+            { transaction },
+          );
+        }
+
+        await linea.producto.update(
           {
-            stockActual:
-              detalle.producto.stockActual - detalle.cantidad,
+            stockActual: linea.producto.stockActual - linea.cantidad,
           },
           {
             transaction,
@@ -413,7 +360,10 @@ const registrarVenta = async (datos, usuario) => {
         );
       }
 
-      await notificarTiendasParticipantes({ idVenta: venta.idVenta, tiendasPorId }, transaction);
+      await notificarTiendasParticipantes(
+        { idVenta: venta.idVenta, tiendasPorId: cotizacion.tiendasPorId },
+        transaction,
+      );
 
       return venta.idVenta;
     },

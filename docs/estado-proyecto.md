@@ -62,7 +62,7 @@ fila relacionada.
 |---|---|---|
 | CRUD Cliente, Proveedor, Producto, TipoMascota (simples/dependientes) | 3. Verificada | CRUD completo + pruebas sin base (`test/crudEntradasInvalidas.test.js`, dentro de los 177/177 actuales) + panel de gestión (`PanelClientes.jsx`, etc.) + integración real (`test-integracion/crudBasico.integracion.js`, dentro de los 30/30, contra `petshop_test`). El recorrido de cliente en el catálogo, no el CRUD de personal, está cubierto además por E2E real (`recorrido-completo.spec.js`). |
 | CRUD Producto {depende de} Categoría y TipoMascota | 3. Verificada | `producto.service.js` valida las relaciones; `PanelProductos.jsx` las gestiona con selects cargados de la API real; `test-integracion/stockYProducto.integracion.js` (dentro de los 30/30). |
-| CRUD PromocionProducto {depende de} Producto y "TipoCategoria" | 3. Verificada (CRUD + validación de calendario), 4. Pendiente (reglas de aplicación) | Ver sección "PromocionProducto" más abajo. |
+| CRUD PromocionProducto {depende de} Producto | Implementada + probada sin base | Validación, calendario, reglas de vigencia y aplicación al checkout/venta manual implementados. La integración contra MySQL para promociones aún no se ha ejecutado en esta rama; ver [promociones.md](promociones.md). |
 | Listado de productos filtrado por categoría o tipo de mascota, con detalle | 2. Probada sin base + 3. Verificada por E2E real | `GET /api/productos?idCategoria=&idTipoMascota=`, `Catalogo.jsx` + `ProductoDetalle.jsx`; recorrido de búsqueda cubierto por `recorrido-completo.spec.js` (18/18 real); capturas de los tres viewports en `capturas.spec.js`. |
 | Listado de ventas filtrado por cliente o proveedor, con detalle | 2. Probada sin base | `GET /api/ventas?idCliente=&idProveedor=`, `PanelVentas.jsx` + `VentaDetalle.jsx`. El filtro por proveedor es una interpretación propuesta (ver más abajo), sin caso de prueba E2E propio — el filtro no forma parte de ningún caso cubierto por `recorrido-completo.spec.js`. |
 | CUU: Registrar una venta | 3. Verificada, E2E real | `recorrido-completo.spec.js` ("iniciar sesión, buscar un producto, agregar al carrito, confirmar la compra y cancelarla" y "un vendedor puede cargar una venta... y marcarla como enviada"), dentro de los 18/18 reales contra `petshop_e2e`. También `test-integracion/ventaConcurrencia.integracion.js` (dentro de los 30/30). Ver [casos-de-uso.md](casos-de-uso.md). |
@@ -117,54 +117,17 @@ compra"/"Registrar venta". Probado sin base
 
 ## PromocionProducto
 
-Se encontró una tabla `promocionproducto` ya creada en la base de
-desarrollo (huérfana, sin modelo/servicio/ruta previos —
-[backend-base-de-datos.md](backend-base-de-datos.md)): `idPromocionProducto`,
-`fechaInicio`/`fechaFin` (`DATE`), `descuento` (`DECIMAL(5,2)`),
-`idProducto` (FK **obligatoria** a `producto`), `idCategoria` (FK
-**opcional** a `categoria`).
+La tabla `promocionproducto` ya existía en la base antes de que tuviera
+servicio o interfaz. En la implementación actual, la promoción es por
+producto; la categoría se obtiene del producto y la columna opcional
+`idCategoria` se elimina con la migración adicional indicada abajo.
 
-Esa FK a `categoria` (no a ninguna tabla "TipoCategoria", que no existe en
-la base) es la evidencia concreta de que la referencia a "TipoCategoria" en
-`proposal.md` es, casi con certeza, un error de tipeo por "Categoria" — se
-tomó esa interpretación para implementar el CRUD, reutilizando la tabla
-existente tal cual (no se recreó ni se le cambió la forma).
-
-**Lo que se implementó**: CRUD completo (`POST`/`GET`/`PUT`/`DELETE
-/api/promociones`, lectura pública, escritura solo personal),
-`PanelPromociones.jsx` en el panel de gestión, y un listado público
-(`Promociones.jsx`) **con un aviso explícito** de que el descuento listado
-no se aplica en el checkout (corrección de esta etapa: antes el listado
-mostraba "Descuento: X" sin esa aclaración, lo que podía leerse como una
-promesa de precio).
-
-**Corrección de esta etapa — validación de calendario real**: `fechaInicio`/
-`fechaFin` antes solo se validaban por formato (`AAAA-MM-DD`) y con
-`new Date()`, que **no rechaza** una fecha de calendario inválida (p. ej.
-`"2026-02-30"`): la normaliza en silencio a otro día real (2 de marzo).
-Ahora se arman los componentes de la fecha y se comprueba que la fecha
-resultante coincida exactamente con lo pedido; si no, se rechaza con `400`.
-Probado en `test/promocionEntradasInvalidas.test.js` (30 de febrero, 31 de
-abril, mes 13, 29 de febrero en año bisiesto vs. no bisiesto).
-
-**Lo que NO se implementó, a propósito**: ninguna regla de aplicación
-automática. No está confirmado si `descuento` es un porcentaje o un monto
-fijo, cómo interactúa con el `descuento` manual que ya existe en `Venta`,
-ni qué pasa si dos promociones vigentes se superponen sobre el mismo
-producto. Mientras eso no se confirme, `registrarVenta` sigue calculando el
-total exactamente igual que antes (precio × cantidad − descuento manual,
-este último ahora restringido a personal, ver arriba); ninguna promoción se
-resta automáticamente.
-
-**Propuesta concreta a confirmar** (no aplicada todavía): interpretar
-`descuento` como un porcentaje (0-100), que se aplique al producto exacto
-(`idProducto`) y, si además tiene `idCategoria`, quede acotado a esa
-categoría; ante superposición, tomar la de mayor descuento; y que la
-promoción se combine con el descuento manual sumando ambos descuentos hasta
-un tope del subtotal (nunca un total negativo). Pendiente de que Mauro la
-confirme o proponga otra. **Todas estas decisiones de promoción pendientes
-quedan agrupadas acá, en un solo lugar**, para que sea fácil revisarlas
-juntas.
+Las reglas y el flujo vigentes están en [promociones.md](promociones.md):
+descuento porcentual, fechas inclusivas en horario de Argentina, sin
+períodos superpuestos por producto, y aplicación tanto en checkout como en
+ventas manuales antes del descuento manual. La integración de promociones contra MySQL en esta rama todavía está
+pendiente; no ejecutar la suite de integración hasta confirmar que apunta a
+la base aislada `petshop_test`.
 
 ## Filtro de ventas por proveedor: interpretación propuesta
 

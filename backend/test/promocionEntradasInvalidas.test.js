@@ -9,7 +9,11 @@ import {
   actualizarPromocion,
   prepararDatosPromocion,
 } from '../src/services/promocionProducto.service.js';
-import { tokenAdministrador, autorizacion } from './ayudaAutenticacion.js';
+import {
+  tokenAdministrador,
+  tokenCliente,
+  autorizacion,
+} from './ayudaAutenticacion.js';
 
 // Mismo mecanismo de protección que en los otros archivos de "entradas
 // inválidas": todos estos casos deben fallar en validación antes de tocar
@@ -101,6 +105,66 @@ test('prepararDatosPromocion acepta el 29 de febrero en un año bisiesto (2028),
   });
 
   assert.equal(datos.fechaInicio, '2028-02-29');
+});
+
+test('prepararDatosPromocion acepta los límites inclusivos de porcentaje y ya no prepara categoría', () => {
+  const minimo = prepararDatosPromocion({
+    fechaInicio: '2028-02-29',
+    fechaFin: '2028-03-01',
+    descuento: 1,
+    idProducto: 1,
+    idCategoria: 7,
+  });
+  const maximo = prepararDatosPromocion({
+    fechaInicio: '2028-02-29',
+    fechaFin: '2028-03-01',
+    descuento: 100,
+    idProducto: 1,
+  });
+
+  assert.equal(minimo.descuento, '1.00');
+  assert.equal(maximo.descuento, '100.00');
+  assert.equal(Object.hasOwn(minimo, 'idCategoria'), false);
+});
+
+test('prepararDatosPromocion rechaza porcentajes inferiores a 1 o superiores a 100', () => {
+  for (const descuento of [0, 0.99, 100.01, 999.99]) {
+    assert.throws(
+      () =>
+        prepararDatosPromocion({
+          fechaInicio: '2028-02-29',
+          fechaFin: '2028-03-01',
+          descuento,
+          idProducto: 1,
+        }),
+      (error) =>
+        error.statusCode === 400 &&
+        error.message === 'El descuento debe ser un porcentaje entre 1 y 100',
+    );
+  }
+});
+
+test('prepararDatosPromocion rechaza porcentajes con más de dos decimales', () => {
+  assert.throws(
+    () =>
+      prepararDatosPromocion({
+        fechaInicio: '2028-02-29',
+        fechaFin: '2028-03-01',
+        descuento: '1.001',
+        idProducto: 1,
+      }),
+    (error) =>
+      error.statusCode === 400 &&
+      error.message === 'El descuento debe ser un porcentaje entre 1 y 100',
+  );
+});
+
+test('la gestión de promociones requiere personal autenticado', async () => {
+  await request(app).get('/api/promociones/gestion').expect(401);
+  await request(app)
+    .get('/api/promociones/gestion')
+    .set('Authorization', autorizacion(tokenCliente()))
+    .expect(403);
 });
 
 test('crearPromocion rechaza el 29 de febrero en un año NO bisiesto (2026)', async () => {

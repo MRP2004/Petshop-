@@ -284,7 +284,6 @@ const crearPromocionDePrueba = async (datos = {}) => {
     fechaFin: '2026-12-31',
     descuento: '10.00',
     idProducto: idProductoFinal,
-    idCategoria: null,
     ...resto,
   });
 };

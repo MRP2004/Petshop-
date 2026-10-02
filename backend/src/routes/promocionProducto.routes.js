@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   listar,
+  listarGestion,
   buscarPorId,
   crear,
   actualizar,
@@ -13,11 +14,10 @@ const router = Router();
 const soloPersonal = [requiereAutenticacion, requiereRol('vendedor', 'administrador')];
 
 // Público: si hay promociones vigentes, la tienda debe poder mostrarlas
-// (ver docs/estado-proyecto.md: no se muestran como aplicadas/calculadas en
-// el precio todavía, solo listadas).
+// únicamente dentro de su período inclusivo de vigencia.
 router.get('/', listar);
+router.get('/gestion', ...soloPersonal, listarGestion);
 router.get('/:id', buscarPorId);
-
 router.post('/', ...soloPersonal, crear);
 router.put('/:id', ...soloPersonal, actualizar);
 router.delete('/:id', ...soloPersonal, eliminar);

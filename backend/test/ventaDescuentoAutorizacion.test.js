@@ -35,6 +35,7 @@ import DetalleVenta from '../src/models/detalleVenta.model.js';
 import Cliente from '../src/models/cliente.model.js';
 import MedioPago from '../src/models/medioPago.model.js';
 import Producto from '../src/models/producto.model.js';
+import PromocionProducto from '../src/models/promocionProducto.model.js';
 import DireccionEntrega from '../src/models/direccionEntrega.model.js';
 import { registrarVenta } from '../src/services/venta.service.js';
 import { tokenCliente, tokenVendedor, autorizacion } from './ayudaAutenticacion.js';
@@ -59,6 +60,7 @@ before(() => {
   originales.clienteFindByPk = Cliente.findByPk;
   originales.medioPagoFindByPk = MedioPago.findByPk;
   originales.productoFindByPk = Producto.findByPk;
+  originales.promocionFindAll = PromocionProducto.findAll;
   originales.ventaCreate = Venta.create;
   originales.ventaFindByPk = Venta.findByPk;
   originales.detalleVentaCreate = DetalleVenta.create;
@@ -71,6 +73,7 @@ before(() => {
   Cliente.findByPk = async (id) => ({ idCliente: id });
   MedioPago.findByPk = async (id) => ({ idMedioPago: id, habilitado: true });
   Producto.findByPk = async () => producto;
+  PromocionProducto.findAll = async () => [];
 
   Venta.create = async (datos) => {
     ventaCreada = { idVenta: 1, ...datos };
@@ -107,6 +110,7 @@ after(() => {
   Cliente.findByPk = originales.clienteFindByPk;
   MedioPago.findByPk = originales.medioPagoFindByPk;
   Producto.findByPk = originales.productoFindByPk;
+  PromocionProducto.findAll = originales.promocionFindAll;
   Venta.create = originales.ventaCreate;
   Venta.findByPk = originales.ventaFindByPk;
   DetalleVenta.create = originales.detalleVentaCreate;

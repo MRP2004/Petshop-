@@ -13,15 +13,9 @@ import {
 import proveedorPrecioActual from './precios/proveedorPrecioActual.js';
 import { verificarTiendasActivas } from './disponibilidadTienda.js';
 
-// El proveedor de precios (ver contrato en
-// docs/cu04-checkout-pago.md, "Contrato de precios para José") es un punto
-// de extensión: hoy lo implementa un módulo propio sin promociones, pero
-// cuando José conecte las reglas reales, un proveedor con un error de
-// cálculo no debe poder generar un subtotal negativo o corrupto que
-// termine cobrado. Se valida la FORMA de lo que devuelve antes de usarlo
-// para nada (revisión independiente, Codex) — responde 500 (problema de
-// los datos que devolvió el proveedor, no de la solicitud del cliente),
-// mismo criterio que validarImportePersistido.
+// El proveedor calcula el precio normal o promocional. Se valida la forma
+// del resultado antes de usarlo para evitar que un error del proveedor
+// genere un subtotal negativo o corrupto que termine cobrado.
 const validarPrecioVigente = (precioVigente, nombreProducto) => {
   const { precioListaCentavos, montoDescuentoCentavos, precioFinalCentavos, porcentajeDescuento, idPromocionProducto } =
     precioVigente || {};
@@ -40,7 +34,12 @@ const validarPrecioVigente = (precioVigente, nombreProducto) => {
     throw new AppError(mensajeError, 500);
   }
 
-  if (typeof porcentajeDescuento !== 'number' || !Number.isFinite(porcentajeDescuento) || porcentajeDescuento < 0) {
+  if (
+    typeof porcentajeDescuento !== 'number' ||
+    !Number.isFinite(porcentajeDescuento) ||
+    porcentajeDescuento < 0 ||
+    porcentajeDescuento > 100
+  ) {
     throw new AppError(mensajeError, 500);
   }
 
@@ -61,6 +60,10 @@ const validarPrecioVigente = (precioVigente, nombreProducto) => {
     throw new AppError(mensajeError, 500);
   }
 
+  if (idPromocionProducto !== null && porcentajeDescuento < 1) {
+    throw new AppError(mensajeError, 500);
+  }
+
   if (porcentajeDescuento > 0 && montoDescuentoCentavos === 0 && precioListaCentavos > 0) {
     throw new AppError(mensajeError, 500);
   }
@@ -74,12 +77,8 @@ const validarPrecioVigente = (precioVigente, nombreProducto) => {
 // autoritativa justo antes de confirmar — nunca se confía en lo que el
 // navegador mandó como aceptado, ver compra.service.js#compararConCotizacion).
 //
-// `proveedorPrecios` es el punto de conexión con José: por defecto usa el
-// proveedor activo (ver precios/proveedorPrecioActual.js — único punto de
-// configuración, compartido por cotización y confirmación); las pruebas de
-// integración inyectan un proveedor controlado para poder probar el
-// circuito completo (promoción vigente, promoción vencida, cambio de
-// precio) sin depender de que las reglas reales ya existan.
+// `proveedorPrecios` usa el proveedor activo compartido por el checkout y
+// la venta manual; las pruebas pueden inyectar uno controlado.
 const cotizar = async (detallesCrudos, opciones = {}) => {
   const { transaction, proveedorPrecios = proveedorPrecioActual } = opciones;
 
@@ -90,10 +89,8 @@ const cotizar = async (detallesCrudos, opciones = {}) => {
 
   // Mismo instante para TODAS las líneas de esta cotización (revisión de
   // diseño, Codex — CU-04, ronda de correcciones): calculado una única vez,
-  // no dentro del loop, para que un proveedor con reglas reales (José)
-  // evalúe "vigente ahora" con un único criterio de "ahora" en toda la
-  // operación, en vez de que la vigencia de una promoción pueda depender de
-  // en qué orden se procesaron las líneas.
+  // no dentro del loop, para que todas las líneas usen el mismo instante
+  // al evaluar la vigencia de sus promociones.
   const instanteEvaluacion = new Date();
 
   const lineas = [];

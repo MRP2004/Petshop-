@@ -8,9 +8,8 @@ import DetalleVenta from './detalleVenta.model.js';
 // comprobante.model.js: sync() no altera `detalleventa`, que ya existía).
 // DetalleVenta.precioUnitario/subtotal (columnas existentes, sin tocar)
 // siguen siendo el precio FINAL unitario y el subtotal, para no romper el
-// contrato ya usado por la carga manual del personal (que no tiene
-// promociones ni fila acá). Esta tabla solo agrega el desglose para las
-// líneas que vinieron del checkout con cotización.
+// contrato ya usado por la carga manual del personal. Las líneas con una
+// promoción guardan su desglose tanto en el checkout como en la carga manual.
 //
 // idPromocionProducto es una referencia informativa, no una FK con
 // integridad referencial: si la promoción se edita o se borra más adelante,

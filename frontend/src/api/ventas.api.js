@@ -18,6 +18,9 @@ const obtener = (id) => solicitar(`/ventas/${id}`);
 // sesión, así que ni hace falta mandarlo.
 const registrar = (datos) => solicitar('/ventas', { metodo: 'POST', cuerpo: datos });
 
+const cotizar = (detalles) =>
+  solicitar('/ventas/cotizacion', { metodo: 'POST', cuerpo: { detalles } });
+
 const cancelar = (id) => solicitar(`/ventas/${id}/cancelar`, { metodo: 'PATCH' });
 
 const marcarComoEnviada = (id) => solicitar(`/ventas/${id}/enviar`, { metodo: 'PATCH' });
@@ -35,6 +38,7 @@ export default {
   listar,
   obtener,
   registrar,
+  cotizar,
   cancelar,
   marcarComoEnviada,
   marcarComoEntregada,

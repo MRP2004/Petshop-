@@ -3,6 +3,7 @@ import {
   listar,
   buscarPorId,
   registrar,
+  cotizar,
   cancelar,
   marcarComoEnviada,
   marcarComoEntregada,
@@ -30,6 +31,12 @@ const limiteReenvioCorreo = limitarIntentos({
 // consulta de ventas sin haber iniciado sesión.
 router.get('/', requiereAutenticacion, listar);
 router.get('/:id', requiereAutenticacion, buscarPorId);
+router.post(
+  '/cotizacion',
+  requiereAutenticacion,
+  requiereRol('vendedor', 'administrador'),
+  cotizar,
+);
 // Corrección (revisión de Codex sobre el diff de CU-04): antes un cliente
 // autenticado podía llamar esta ruta directamente para registrarse su
 // propia compra, salteando por completo el checkout con pago simulado
