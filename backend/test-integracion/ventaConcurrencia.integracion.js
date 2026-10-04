@@ -284,7 +284,7 @@ test('un total final fuera de rango se rechaza aunque cada subtotal individual s
       }),
     (error) =>
       error.statusCode === 400 &&
-      error.message === 'El total de la venta supera el máximo permitido',
+        error.message === 'El total de la compra supera el máximo permitido',
   );
 
   assert.equal(await Venta.count(), 0);
