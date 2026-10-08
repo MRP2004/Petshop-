@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth.js';
 import { useCarrito } from '../hooks/useCarrito.js';
 import useCargaDatos from '../hooks/useCargaDatos.js';
 import categoriasApi from '../api/categorias.api.js';
+import tiposMascotaApi from '../api/tiposMascota.api.js';
 import NavDropdown from './NavDropdown.jsx';
 import BuscadorPredictivo from './BuscadorPredictivo.jsx';
 import CuentaMenu from './CuentaMenu.jsx';
@@ -15,12 +16,9 @@ const RUTAS_ENCABEZADO_REDUCIDO = ['/iniciar-sesion', '/registro'];
 
 // Identidad, buscador, acceso a cuenta y carrito, más navegación por
 // mascota/categoría (ronda 1 de rediseño visual, ver docs/frontend-diseno.md).
-// "Otras especies" y "Marcas" del boceto original NO se implementan como
-// desplegables acá: hoy no existe ningún TipoMascota más allá de
-// Perro/Gato ni ningún modelo de marca en el backend (ver
-// backend/scripts/sembrarDatosDemo.js), y mostrar un menú sin contenido real
-// detrás sería peor que no mostrarlo (instrucción explícita de esta ronda).
-// Quedan documentados como pendiente de backend en el resumen de entrega.
+// Los grupos adicionales se muestran únicamente cuando existen en la API.
+// Las marcas se consultan como filtro en Catálogo, a partir de los productos
+// publicados; no se anuncia un menú de marcas sin datos detrás.
 const Navbar = () => {
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   // Ronda 2: "Salir" ya no cierra la sesión directamente al hacer clic —
@@ -32,6 +30,15 @@ const Navbar = () => {
   const { carrito } = useCarrito();
 
   const { datos: categorias } = useCargaDatos(useCallback(() => categoriasApi.listar(), []));
+  const { datos: mascotas } = useCargaDatos(useCallback(() => tiposMascotaApi.jerarquia(), []));
+  const otrasMascotas = (mascotas || []).filter((tipo) => !['perro', 'gato'].includes(tipo.nombre.toLowerCase()));
+  const itemsOtrasMascotas = otrasMascotas.flatMap((tipo) => [
+    { to: `/catalogo?mascota=${tipo.idTipoMascota}`, etiqueta: tipo.nombre },
+    ...tipo.subtipos.map((subtipo) => ({
+      to: `/catalogo?mascota=${tipo.idTipoMascota}&idSubtipoMascota=${subtipo.idTipoMascota}`,
+      etiqueta: `${tipo.nombre} · ${subtipo.nombre}`,
+    })),
+  ]);
 
   const encabezadoReducido = RUTAS_ENCABEZADO_REDUCIDO.includes(ubicacion.pathname);
   // Ronda 2, Etapa 8: dentro del panel (personal interno O vendedor
@@ -148,6 +155,9 @@ const Navbar = () => {
           </Link>
           <NavDropdown etiqueta="Perros" enlaceVerTodo="/catalogo?mascota=perro" items={itemsPorMascota('perro')} />
           <NavDropdown etiqueta="Gatos" enlaceVerTodo="/catalogo?mascota=gato" items={itemsPorMascota('gato')} />
+          {otrasMascotas.length > 0 && (
+            <NavDropdown etiqueta="Otras mascotas" enlaceVerTodo="/catalogo" items={itemsOtrasMascotas} />
+          )}
           <Link to="/promociones" className="navbar__nav-enlace navbar__nav-enlace--promo">
             Promociones
           </Link>
@@ -183,6 +193,24 @@ const Navbar = () => {
               </Link>
             ))}
           </details>
+
+          {otrasMascotas.map((tipo) => (
+            <details key={tipo.idTipoMascota} className="navbar__acordeon">
+              <summary>{tipo.nombre}</summary>
+              <Link to={`/catalogo?mascota=${tipo.idTipoMascota}`} onClick={() => setMenuMovilAbierto(false)}>
+                Ver todo {tipo.nombre.toLowerCase()}
+              </Link>
+              {tipo.subtipos.map((subtipo) => (
+                <Link
+                  key={subtipo.idTipoMascota}
+                  to={`/catalogo?mascota=${tipo.idTipoMascota}&idSubtipoMascota=${subtipo.idTipoMascota}`}
+                  onClick={() => setMenuMovilAbierto(false)}
+                >
+                  {subtipo.nombre}
+                </Link>
+              ))}
+            </details>
+          ))}
 
           <Link to="/promociones" onClick={() => setMenuMovilAbierto(false)}>
             Promociones

@@ -22,6 +22,7 @@ import {
   crearMedioPagoDePrueba,
   crearMediosPagoSimuladosDePrueba,
   crearProductoDePrueba,
+  crearVendedorIndependienteDePrueba,
 } from './ayudaIntegracion.js';
 
 let cliente;
@@ -113,6 +114,34 @@ test('el listado público devuelve solo promociones vigentes; el listado de gest
     .set('Authorization', autorizacion(tokenAdministrador()))
     .expect(200);
   assert.equal(gestion.body.length, 2);
+});
+
+test('las promociones públicas ocultan tiendas suspendidas y gestión las conserva', async () => {
+  const activa = await crearVendedorIndependienteDePrueba();
+  const suspendida = await crearVendedorIndependienteDePrueba({ tienda: { estado: 'suspendida' } });
+  const hoy = obtenerFechaArgentina();
+  const promociones = [];
+  for (const idTienda of [null, activa.tienda.idTienda, suspendida.tienda.idTienda]) {
+    const producto = await crearProductoDePrueba({ idTienda });
+    promociones.push(await promocionPara(producto, hoy, hoy));
+  }
+  const idsVisibles = promociones.slice(0, 2).map((p) => p.idPromocionProducto).sort((a, b) => a - b);
+  const publico = await request(app).get('/api/promociones').expect(200);
+  const detalleSuspendida = await request(app).get(`/api/promociones/${promociones[2].idPromocionProducto}`);
+  for (const promocion of promociones.slice(0, 2)) {
+    const detalle = await request(app).get(`/api/promociones/${promocion.idPromocionProducto}`).expect(200);
+    assert.equal(detalle.body.idPromocionProducto, promocion.idPromocionProducto);
+  }
+  const gestion = await request(app)
+    .get('/api/promociones/gestion')
+    .set('Authorization', autorizacion(tokenAdministrador()))
+    .expect(200);
+  assert.deepEqual(gestion.body.map((p) => p.idPromocionProducto).sort((a, b) => a - b),
+    promociones.map((p) => p.idPromocionProducto).sort((a, b) => a - b));
+  assert.deepEqual({
+    idsPublicos: publico.body.map((p) => p.idPromocionProducto).sort((a, b) => a - b),
+    estadoDetalleSuspendida: detalleSuspendida.status,
+  }, { idsPublicos: idsVisibles, estadoDetalleSuspendida: 404 });
 });
 
 test('la promoción real se refleja en la cotización y en la compra confirmada', async () => {

@@ -3,9 +3,11 @@
 // (scripts/crearTablasNuevas.js, scripts/verificarEsquemaActual.js), para que
 // un modelo nuevo no quede afuera de alguno de ellos por olvido.
 import './tipoMascota.model.js';
+import './jerarquiaMascota.model.js';
 import './categoria.model.js';
 import './proveedor.model.js';
 import './producto.model.js';
+import './facetaProducto.model.js';
 import './cliente.model.js';
 import './medioPago.model.js';
 import './venta.model.js';

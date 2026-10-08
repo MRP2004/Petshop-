@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:e2e": "vite --mode e2e --port 5183 --strictPort",
+    "dev:catalogo": "vite --mode catalogo --port 5184 --strictPort",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",

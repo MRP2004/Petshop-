@@ -13,6 +13,16 @@ const listarFiltrado = ({ idCategoria, idTipoMascota } = {}) => {
   return base.listar(query ? `?${query}` : '');
 };
 
+const buscarCatalogo = (filtros = {}) => {
+  const parametros = new URLSearchParams();
+  for (const [clave, valor] of Object.entries(filtros)) {
+    if (valor !== undefined && valor !== null && valor !== '') parametros.set(clave, valor);
+  }
+  return solicitar(`/productos/catalogo?${parametros.toString()}`);
+};
+
+const listarMarcas = () => solicitar('/productos/marcas');
+
 const listarStockBajo = () => solicitar('/productos/stock-bajo');
 
 const ajustarStock = (id, cantidad) =>
@@ -25,6 +35,8 @@ const sugerencias = (termino) => solicitar(`/productos/sugerencias?q=${encodeURI
 export default {
   ...base,
   listarFiltrado,
+  buscarCatalogo,
+  listarMarcas,
   listarStockBajo,
   ajustarStock,
   sugerencias,

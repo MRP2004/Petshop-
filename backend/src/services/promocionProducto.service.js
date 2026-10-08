@@ -2,6 +2,7 @@ import { Op } from 'sequelize';
 import sequelize from '../config/database.js';
 import PromocionProducto from '../models/promocionProducto.model.js';
 import Producto from '../models/producto.model.js';
+import Tienda from '../models/tienda.model.js';
 import AppError from '../errors/AppError.js';
 import {
   MAXIMO_ENTERO_POSITIVO,
@@ -152,10 +153,26 @@ const comprobarSinSuperposicion = async (
 
 const relaciones = [{ model: Producto, as: 'producto' }];
 
+// El público sigue la visibilidad del catálogo; gestión conserva todas.
+const relacionesPublicas = [{
+  model: Producto,
+  as: 'producto',
+  required: true,
+  include: [{ model: Tienda, as: 'tienda', required: false, attributes: [] }],
+}];
+
+const filtroTiendaPublica = {
+  [Op.or]: [
+    { '$producto.idTienda$': null },
+    { '$producto.tienda.estado$': 'activa' },
+  ],
+};
+
 const obtenerPromociones = async (fecha = obtenerFechaArgentina()) => {
   return PromocionProducto.findAll({
-    include: relaciones,
+    include: relacionesPublicas,
     where: {
+      ...filtroTiendaPublica,
       fechaInicio: { [Op.lte]: fecha },
       fechaFin: { [Op.gte]: fecha },
     },
@@ -174,11 +191,12 @@ const obtenerPromocionPublicaPorId = async (id) => {
   const fecha = obtenerFechaArgentina();
   const promocion = await PromocionProducto.findOne({
     where: {
+      ...filtroTiendaPublica,
       idPromocionProducto,
       fechaInicio: { [Op.lte]: fecha },
       fechaFin: { [Op.gte]: fecha },
     },
-    include: relaciones,
+    include: relacionesPublicas,
   });
 
   if (!promocion) {

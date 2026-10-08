@@ -1,4 +1,7 @@
 import TipoMascota from '../models/tipoMascota.model.js';
+import JerarquiaMascota from '../models/jerarquiaMascota.model.js';
+import { Op } from 'sequelize';
+import sequelize from '../config/database.js';
 import AppError from '../errors/AppError.js';
 import {
   MAXIMO_ENTERO_POSITIVO,
@@ -80,6 +83,36 @@ export const actualizarTipoMascota = async (id, datos) => {
 
 export const eliminarTipoMascota = async (id) => {
   const tipoMascota = await obtenerTipoMascotaPorId(id);
+  await sequelize.transaction(async (transaction) => {
+    const hijos = await JerarquiaMascota.count({
+      where: { idTipoPadre: tipoMascota.idTipoMascota }, transaction,
+    });
+    if (hijos > 0) {
+      throw new AppError('El tipo tiene subtipos: eliminá primero sus subtipos', 409);
+    }
+    await JerarquiaMascota.destroy({
+      where: { [Op.or]: [
+        { idTipoPadre: tipoMascota.idTipoMascota },
+        { idTipoHijo: tipoMascota.idTipoMascota },
+      ] }, transaction,
+    });
+    await tipoMascota.destroy({ transaction });
+  });
+};
 
-  await tipoMascota.destroy();
+export const obtenerJerarquiaMascotas = async () => {
+  const [tipos, relaciones] = await Promise.all([
+    TipoMascota.findAll({ order: [['nombre', 'ASC']], raw: true }),
+    JerarquiaMascota.findAll({ raw: true }),
+  ]);
+  const porId = new Map(tipos.map((tipo) => [tipo.idTipoMascota, tipo]));
+  const hijos = new Set(relaciones.map((relacion) => relacion.idTipoHijo));
+  return tipos.filter((tipo) => !hijos.has(tipo.idTipoMascota)).map((tipo) => ({
+    ...tipo,
+    subtipos: relaciones
+      .filter((relacion) => relacion.idTipoPadre === tipo.idTipoMascota)
+      .map((relacion) => porId.get(relacion.idTipoHijo))
+      .filter(Boolean)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
+  }));
 };

@@ -35,7 +35,7 @@ test('vendedor independiente: solicitud, aprobación, nueva sesión, producto pr
   // viewport del proyecto: browser.newContext() no los hereda solo.
   const { baseURL, viewport } = testInfo.project.use;
   const nuevoContexto = () => browser.newContext({ baseURL, viewport });
-  const dirCapturas = path.resolve('e2e/capturas-salida', testInfo.project.name);
+  const dirCapturas = path.resolve(process.env.E2E_CAPTURAS_DIR || 'e2e/capturas-salida', testInfo.project.name);
   const capturar = (pagina, archivo) => pagina.screenshot({ path: path.join(dirCapturas, archivo), fullPage: true });
 
   const sufijo = `${testInfo.project.name}-${Date.now()}`;

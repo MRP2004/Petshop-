@@ -27,6 +27,7 @@ import app from '../src/app.js';
 import sequelize from '../src/config/database.js';
 import Producto from '../src/models/producto.model.js';
 import ImagenProducto from '../src/models/imagenProducto.model.js';
+import FacetaProducto from '../src/models/facetaProducto.model.js';
 import Favorito from '../src/models/favorito.model.js';
 import { tokenVendedor, autorizacion } from './ayudaAutenticacion.js';
 
@@ -74,6 +75,7 @@ before(() => {
   originales.imagenCreate = ImagenProducto.create;
   originales.imagenFindByPk = ImagenProducto.findByPk;
   originales.imagenDestroy = ImagenProducto.destroy;
+  originales.facetaDestroy = FacetaProducto.destroy;
   originales.favoritoDestroy = Favorito.destroy;
 
   // Cada llamada a sequelize.transaction usa un objeto de transacción
@@ -124,6 +126,11 @@ before(() => {
     return 1;
   };
 
+  FacetaProducto.destroy = async (options) => {
+    registrarLlamada('FacetaProducto.destroy', options);
+    return 0;
+  };
+
   // Mismo motivo que ImagenProducto.destroy (ronda 2, Etapa 5: eliminarProducto
   // también borra los favoritos del producto antes de borrarlo, ver
   // producto.service.js): sin este stub, el código real intentaría una
@@ -147,6 +154,7 @@ after(() => {
   ImagenProducto.create = originales.imagenCreate;
   ImagenProducto.findByPk = originales.imagenFindByPk;
   ImagenProducto.destroy = originales.imagenDestroy;
+  FacetaProducto.destroy = originales.facetaDestroy;
   Favorito.destroy = originales.favoritoDestroy;
 });
 
@@ -238,12 +246,15 @@ test('borrado permitido: producto e imagen se eliminan con la misma transacción
   assert.equal(imagenDestruida, true);
 
   const borradoImagen = llamadasConTransaccion.find((l) => l.metodo === 'ImagenProducto.destroy');
+  const borradoFaceta = llamadasConTransaccion.find((l) => l.metodo === 'FacetaProducto.destroy');
   const borradoFavorito = llamadasConTransaccion.find((l) => l.metodo === 'Favorito.destroy');
   const borradoProducto = llamadasConTransaccion.find((l) => l.metodo === 'producto.destroy');
   assert.ok(borradoImagen);
+  assert.ok(borradoFaceta);
   assert.ok(borradoFavorito);
   assert.ok(borradoProducto);
   assert.equal(borradoImagen.transaccionRecibida, borradoProducto.transaccionRecibida);
+  assert.equal(borradoFaceta.transaccionRecibida, borradoProducto.transaccionRecibida);
   assert.equal(borradoFavorito.transaccionRecibida, borradoProducto.transaccionRecibida);
 });
 
@@ -264,9 +275,11 @@ test('borrado bloqueado por ventas: producto.destroy falla y el error se propaga
   assert.notEqual(respuesta.status, 204);
 
   const borradoImagen = llamadasConTransaccion.find((l) => l.metodo === 'ImagenProducto.destroy');
+  const borradoFaceta = llamadasConTransaccion.find((l) => l.metodo === 'FacetaProducto.destroy');
   const borradoFavorito = llamadasConTransaccion.find((l) => l.metodo === 'Favorito.destroy');
   const borradoProducto = llamadasConTransaccion.find((l) => l.metodo === 'producto.destroy');
   assert.ok(borradoImagen, 'ImagenProducto.destroy sí se había intentado (y "tenido éxito" en el stub)');
+  assert.ok(borradoFaceta, 'FacetaProducto.destroy sí se había intentado en la misma transacción');
   assert.ok(borradoFavorito, 'Favorito.destroy sí se había intentado (y "tenido éxito" en el stub)');
   assert.ok(borradoProducto, 'producto.destroy sí se había intentado (y fallado)');
   assert.equal(
@@ -274,6 +287,7 @@ test('borrado bloqueado por ventas: producto.destroy falla y el error se propaga
     borradoProducto.transaccionRecibida,
     'ambos borrados debían compartir la misma transacción para que el rollback deshaga los dos juntos',
   );
+  assert.equal(borradoFaceta.transaccionRecibida, borradoProducto.transaccionRecibida);
   assert.equal(
     borradoFavorito.transaccionRecibida,
     borradoProducto.transaccionRecibida,

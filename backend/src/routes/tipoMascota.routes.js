@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   listar,
+  listarJerarquia,
   obtenerPorId,
   crear,
   actualizar,
@@ -15,6 +16,7 @@ const soloPersonal = [requiereAutenticacion, requiereRol('vendedor', 'administra
 // Público: la navegación por tipo de mascota (catálogo) la necesita
 // cualquier visitante, no solo usuarios autenticados.
 router.get('/', listar);
+router.get('/jerarquia', listarJerarquia);
 router.get('/:id', obtenerPorId);
 
 router.post('/', ...soloPersonal, crear);

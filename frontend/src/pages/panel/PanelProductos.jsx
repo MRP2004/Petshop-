@@ -7,6 +7,7 @@ import productosApi from '../../api/productos.api.js';
 import categoriasApi from '../../api/categorias.api.js';
 import tiposMascotaApi from '../../api/tiposMascota.api.js';
 import proveedoresApi from '../../api/proveedores.api.js';
+import './PanelProductos.css';
 
 const pedirRelaciones = () =>
   Promise.all([categoriasApi.listar(), tiposMascotaApi.listar(), proveedoresApi.listar()]).then(
@@ -86,6 +87,9 @@ const AjustarStockAccion = ({ producto, onCambio }) => {
 
 const PanelProductos = () => {
   const { datos: opciones, error, recargar } = useCargaDatos(useCallback(() => pedirRelaciones(), []));
+  const [idCategoria, setIdCategoria] = useState('');
+  const [idTipoMascota, setIdTipoMascota] = useState('');
+  const [busqueda, setBusqueda] = useState('');
 
   if (error) return <EstadoError mensaje={error} onReintentar={recargar} />;
   if (!opciones) return <EstadoCarga mensaje="Cargando relaciones del producto…" />;
@@ -119,17 +123,46 @@ const PanelProductos = () => {
     },
   ];
 
+  const texto = busqueda.trim().toLocaleLowerCase('es-AR');
+  const coincide = (producto) =>
+    (!idCategoria || Number(producto.idCategoria) === Number(idCategoria)) &&
+    (!idTipoMascota || Number(producto.idTipoMascota) === Number(idTipoMascota)) &&
+    (!texto || producto.nombre.toLocaleLowerCase('es-AR').includes(texto));
+
   return (
-    <GestionEntidad
-      titulo="Productos"
-      servicio={productosApi}
-      campos={campos}
-      columnas={columnas}
-      idCampo="idProducto"
-      renderAccionesExtra={(fila, onCambio) => (
-        <AjustarStockAccion key="stock" producto={fila} onCambio={onCambio} />
-      )}
-    />
+    <div>
+      <div className="panel-productos__filtros" role="group" aria-label="Filtrar productos del panel">
+        <div className="campo">
+          <label htmlFor="panel-productos-categoria">Categoría</label>
+          <select id="panel-productos-categoria" value={idCategoria} onChange={(evento) => setIdCategoria(evento.target.value)}>
+            <option value="">Todas</option>
+            {opciones.categorias.map((opcion) => <option key={opcion.valor} value={opcion.valor}>{opcion.etiqueta}</option>)}
+          </select>
+        </div>
+        <div className="campo">
+          <label htmlFor="panel-productos-mascota">Mascota</label>
+          <select id="panel-productos-mascota" value={idTipoMascota} onChange={(evento) => setIdTipoMascota(evento.target.value)}>
+            <option value="">Todas</option>
+            {opciones.tiposMascota.map((opcion) => <option key={opcion.valor} value={opcion.valor}>{opcion.etiqueta}</option>)}
+          </select>
+        </div>
+        <div className="campo">
+          <label htmlFor="panel-productos-busqueda">Buscar por nombre</label>
+          <input id="panel-productos-busqueda" type="search" placeholder="Ej.: pelota, alimento…" value={busqueda} onChange={(evento) => setBusqueda(evento.target.value)} />
+        </div>
+      </div>
+      <GestionEntidad
+        titulo="Productos"
+        servicio={productosApi}
+        campos={campos}
+        columnas={columnas}
+        idCampo="idProducto"
+        filtrarFilas={coincide}
+        renderAccionesExtra={(fila, onCambio) => (
+          <AjustarStockAccion key="stock" producto={fila} onCambio={onCambio} />
+        )}
+      />
+    </div>
   );
 };
 

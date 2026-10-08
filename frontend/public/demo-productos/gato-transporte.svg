@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 260" role="img" aria-label="Ilustración de Transporte para Gato">
+  <rect width="320" height="260" rx="22" fill="#dccdf0"/>
+  <circle cx="266" cy="35" r="45" fill="#fff" opacity=".38"/>
+  <circle cx="47" cy="222" r="39" fill="#fff" opacity=".30"/>
+  <g color="#65417c"><rect x="103" y="112" width="114" height="73" rx="13" fill="#fff" stroke="currentColor" stroke-width="5"/><path d="M132 112V96a28 28 0 0 1 56 0v16M120 137h80" fill="none" stroke="currentColor" stroke-width="5"/></g>
+  <text x="160" y="218" text-anchor="middle" fill="#65417c" font-family="Arial,sans-serif" font-weight="700" font-size="18">Transporte</text>
+  <text x="160" y="243" text-anchor="middle" fill="#65417c" font-family="Arial,sans-serif" font-size="14">Gato</text>
+</svg>

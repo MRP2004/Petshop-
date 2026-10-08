@@ -1,0 +1,19 @@
+.panel-productos__filtros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-borde);
+}
+
+.panel-productos__filtros .campo {
+  margin: 0;
+}
+
+.panel-productos__filtros select,
+.panel-productos__filtros input {
+  width: 100%;
+}

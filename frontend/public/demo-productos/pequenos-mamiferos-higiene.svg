@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 260" role="img" aria-label="Ilustración de Higiene para Pequeños mamíferos">
+  <rect width="320" height="260" rx="22" fill="#ecd5c7"/>
+  <circle cx="266" cy="35" r="45" fill="#fff" opacity=".38"/>
+  <circle cx="47" cy="222" r="39" fill="#fff" opacity=".30"/>
+  <g color="#775a4d"><path d="M139 83h42v19l13 15v66h-68v-66l13-15z" fill="#fff" stroke="currentColor" stroke-width="5"/><path d="M137 122h46M143 76h35" stroke="currentColor" stroke-width="5"/></g>
+  <text x="160" y="218" text-anchor="middle" fill="#775a4d" font-family="Arial,sans-serif" font-weight="700" font-size="18">Higiene</text>
+  <text x="160" y="243" text-anchor="middle" fill="#775a4d" font-family="Arial,sans-serif" font-size="14">Pequeños mamíferos</text>
+</svg>
