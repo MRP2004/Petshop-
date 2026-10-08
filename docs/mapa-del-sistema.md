@@ -14,10 +14,10 @@ Pantalla (frontend) → ruta de la API → controlador → servicio → modelo/t
 | Mi cuenta (`MiCuenta.jsx`) | `GET /api/ventas` (filtrado por sesión) | `venta.controller.js` | `venta.service.js` (`obtenerVentas`) | `venta` + relaciones |
 | Detalle de venta (`VentaDetalle.jsx`) | `GET /api/ventas/:id`, `PATCH /:id/cancelar`, `PATCH /:id/enviar` | `venta.controller.js` | `venta.service.js` | `venta`, `detalleventa`, `producto`, `cliente`, `mediopago` |
 | Panel → Ventas (`PanelVentas.jsx`) | `GET /api/ventas?idCliente=&idProveedor=` | `venta.controller.js` | `venta.service.js` (incluye `obtenerIdsVentaPorProveedor`) | `venta`, `detalleventa`, `producto`, `cliente` |
-| Panel → Nueva venta (`PanelNuevaVenta.jsx`) | `POST /api/ventas` (con `idCliente` explícito) | `venta.controller.js` | `venta.service.js` (`registrarVenta`) | igual que checkout |
+| Panel → Nueva venta (`PanelNuevaVenta.jsx`) | `POST /api/ventas/cotizacion`, `POST /api/ventas` (con `idCliente` explícito) | `venta.controller.js` | `cotizacion.service.js`, `venta.service.js` | igual que checkout |
 | Panel → Productos (`PanelProductos.jsx`) | `GET/POST/PUT/DELETE /api/productos`, `PATCH /:id/stock` | `producto.controller.js` | `producto.service.js` | `producto` |
 | Panel → Categorías / Tipos de mascota / Medios de pago / Proveedores / Clientes | CRUD de cada uno | `*.controller.js` respectivo | `*.service.js` respectivo | tabla respectiva |
-| Panel → Promociones (`PanelPromociones.jsx`) | CRUD `/api/promociones` | `promocionProducto.controller.js` | `promocionProducto.service.js` | `promocionproducto` |
+| Panel → Promociones (`PanelPromociones.jsx`) | CRUD `/api/promociones`, listado completo `/gestion` | `promocionProducto.controller.js` | `promocionProducto.service.js` | `promocionproducto` |
 | Panel → Cuentas internas (`PanelUsuarios.jsx`) | `POST /api/usuarios` | `usuario.controller.js` | `usuario.service.js` (`crearUsuarioInterno`) | `usuario` |
 
 Todas las rutas pasan por `src/middlewares/autenticacion.middleware.js`

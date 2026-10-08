@@ -13,6 +13,18 @@ const tokenVendedor = (idUsuario = 1002) =>
 const tokenAdministrador = (idUsuario = 1003) =>
   firmarToken({ idUsuario, rol: 'administrador', idCliente: null });
 
+// Ronda 2, Etapa 8 (marketplace): conserva idCliente (sigue siendo
+// comprador) Y lleva idTienda — mismo criterio que un vendedor
+// independiente real (ver usuario.service.js).
+const tokenVendedorIndependiente = (idCliente = 1, idTienda = 1, idUsuario = 1004) =>
+  firmarToken({ idUsuario, rol: 'vendedor_independiente', idCliente, idTienda });
+
 const autorizacion = (token) => `Bearer ${token}`;
 
-export { tokenCliente, tokenVendedor, tokenAdministrador, autorizacion };
+export {
+  tokenCliente,
+  tokenVendedor,
+  tokenAdministrador,
+  tokenVendedorIndependiente,
+  autorizacion,
+};

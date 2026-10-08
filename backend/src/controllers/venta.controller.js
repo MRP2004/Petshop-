@@ -4,7 +4,9 @@ import {
   registrarVenta,
   cancelarVenta,
   marcarVentaComoEnviada,
+  marcarVentaComoEntregada,
 } from '../services/venta.service.js';
+import { cotizar as cotizarPrecios, aRespuestaPublica } from '../services/cotizacion.service.js';
 
 const listar = async (req, res, next) => {
   try {
@@ -33,6 +35,15 @@ const registrar = async (req, res, next) => {
   }
 };
 
+const cotizar = async (req, res, next) => {
+  try {
+    const resultado = await cotizarPrecios(req.body.detalles);
+    res.status(200).json(aRespuestaPublica(resultado));
+  } catch (error) {
+    next(error);
+  }
+};
+
 const cancelar = async (req, res, next) => {
   try {
     const venta = await cancelarVenta(req.params.id, req.usuario);
@@ -51,10 +62,21 @@ const marcarComoEnviada = async (req, res, next) => {
   }
 };
 
+const marcarComoEntregada = async (req, res, next) => {
+  try {
+    const venta = await marcarVentaComoEntregada(req.params.id);
+    res.status(200).json(venta);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   listar,
   buscarPorId,
   registrar,
+  cotizar,
   cancelar,
   marcarComoEnviada,
+  marcarComoEntregada,
 };

@@ -19,10 +19,21 @@ import '../src/models/usuario.model.js';
 import '../src/models/promocionProducto.model.js';
 import '../src/models/direccionEntrega.model.js';
 import '../src/models/imagenProducto.model.js';
+import '../src/models/intentoCompra.model.js';
+import '../src/models/pago.model.js';
+import '../src/models/comprobante.model.js';
+import '../src/models/detalleVentaPromocion.model.js';
+import '../src/models/solicitudCancelacion.model.js';
+import '../src/models/direccionCliente.model.js';
+import '../src/models/favorito.model.js';
+import '../src/models/aviso.model.js';
+import '../src/models/tienda.model.js';
+import '../src/models/solicitudVendedor.model.js';
 import Cliente from '../src/models/cliente.model.js';
 import MedioPago from '../src/models/medioPago.model.js';
 import Producto from '../src/models/producto.model.js';
 import Usuario from '../src/models/usuario.model.js';
+import Tienda from '../src/models/tienda.model.js';
 import PromocionProducto from '../src/models/promocionProducto.model.js';
 import { hashearContrasena } from '../src/utils/contrasenas.js';
 
@@ -120,19 +131,44 @@ const prepararEsquema = async () => {
 //
 // Incluye `usuario` (FK opcional a `cliente`: se borra antes que cliente),
 // `promocionproducto` (FK obligatoria a `producto`, opcional a `categoria`:
-// se borra antes que ambas) y `direccionentrega` (FK obligatoria a `venta`,
-// tabla nueva del caso de uso de envío a domicilio: se borra antes que
-// venta) — las tablas que se agregaron después de que existiera esta
-// limpieza y que había que sumar acá, respetando sus relaciones.
+// se borra antes que ambas), `direccionentrega` (FK obligatoria a `venta`,
+// tabla del caso de uso de envío a domicilio: se borra antes que venta),
+// `solicitudcancelacion` (FK obligatoria a `venta`: se borra antes que
+// venta, misma razón) y las cuatro tablas de CU-04 (`pago`, `comprobante`,
+// `detalleventapromocion` —dependen de `venta`/`detalleventa`, se borran
+// antes— e `intentocompra` —depende de `cliente`/`venta`, se borra antes
+// que ambas—) y `direccioncliente` (FK obligatoria a `cliente`, ronda 2:
+// dirección estructurada del cliente, se borra antes que cliente) — las
+// tablas que se agregaron después de que existiera esta limpieza y que
+// había que sumar acá, respetando sus relaciones.
+//
+// Ronda 2, Etapa 8 (marketplace): `producto` se corrió ANTES que `usuario`
+// (antes iba después) porque ahora `producto.idTienda` referencia a
+// `tienda`, que a su vez referencia a `usuario` (`tienda.idUsuario`) —
+// `imagenproducto` se movió junto a `producto` por la misma razón (debe
+// seguir borrándose antes que `producto`). `solicitudvendedor` tiene DOS
+// FKs a `usuario` (`idUsuario` del solicitante, `idUsuarioResolvio` del
+// administrador que resolvió) — se borra antes que `usuario`, junto con
+// `tienda`.
 const limpiarDatos = async () => {
   await asegurarBaseEfectivaDePrueba();
+  await sequelize.query('DELETE FROM aviso');
+  await sequelize.query('DELETE FROM favorito');
+  await sequelize.query('DELETE FROM direccioncliente');
   await sequelize.query('DELETE FROM direccionentrega');
+  await sequelize.query('DELETE FROM solicitudcancelacion');
+  await sequelize.query('DELETE FROM pago');
+  await sequelize.query('DELETE FROM comprobante');
+  await sequelize.query('DELETE FROM detalleventapromocion');
+  await sequelize.query('DELETE FROM intentocompra');
   await sequelize.query('DELETE FROM detalleventa');
   await sequelize.query('DELETE FROM promocionproducto');
-  await sequelize.query('DELETE FROM usuario');
-  await sequelize.query('DELETE FROM venta');
   await sequelize.query('DELETE FROM imagenproducto');
   await sequelize.query('DELETE FROM producto');
+  await sequelize.query('DELETE FROM tienda');
+  await sequelize.query('DELETE FROM solicitudvendedor');
+  await sequelize.query('DELETE FROM usuario');
+  await sequelize.query('DELETE FROM venta');
   await sequelize.query('DELETE FROM categoria');
   await sequelize.query('DELETE FROM tipomascota');
   await sequelize.query('DELETE FROM proveedor');
@@ -159,6 +195,23 @@ const crearMedioPagoDePrueba = async (datos = {}) =>
     habilitado: true,
     ...datos,
   });
+
+// compra.service.js#obtenerIdMedioPagoSimulado busca estos DOS nombres
+// exactos (ver sembrarDatosDemo.js/sembrarDatosE2E.js): cualquier prueba de
+// integración que llame a confirmarCompra necesita que existan.
+const crearMediosPagoSimuladosDePrueba = async () =>
+  Promise.all([
+    MedioPago.create({
+      nombre: 'Transferencia bancaria (simulada)',
+      descripcion: null,
+      habilitado: true,
+    }),
+    MedioPago.create({
+      nombre: 'Débito (simulado)',
+      descripcion: null,
+      habilitado: true,
+    }),
+  ]);
 
 const crearProductoDePrueba = async (datos = {}) =>
   Producto.create({
@@ -191,6 +244,33 @@ const crearUsuarioDePrueba = async (datos = {}) => {
   });
 };
 
+// Cuenta 'vendedor_independiente' real con su Tienda propia ya creada (a
+// diferencia de crearUsuarioDePrueba, que siempre arranca en 'cliente'):
+// crea el Cliente + Usuario + Tienda en un solo paso, listos para probar
+// autorización por tienda sin repetir esos 3 pasos en cada prueba. Conserva
+// idCliente (a propósito, ver usuario.model.js: un vendedor independiente
+// sigue siendo comprador).
+const crearVendedorIndependienteDePrueba = async (datos = {}) => {
+  const { password = 'ClaveDePrueba123', nombreTienda = 'Tienda de prueba', tienda: datosTienda = {}, ...resto } = datos;
+
+  const usuario = await crearUsuarioDePrueba({
+    password,
+    rol: 'vendedor_independiente',
+    ...resto,
+  });
+
+  const tienda = await Tienda.create({
+    idUsuario: usuario.idUsuario,
+    nombre: nombreTienda,
+    tipoDocumento: 'CUIL',
+    numeroDocumento: '20172543597', // CUIT/CUIL real, ver test/validacionFiscal.test.js
+    estado: 'activa',
+    ...datosTienda,
+  });
+
+  return { usuario, tienda };
+};
+
 // PromocionProducto requiere idProducto (FK obligatoria): si no se pasa, se
 // crea un Producto de prueba nuevo para respetar esa relación en vez de
 // insertar una fila que violaría la FK.
@@ -204,7 +284,6 @@ const crearPromocionDePrueba = async (datos = {}) => {
     fechaFin: '2026-12-31',
     descuento: '10.00',
     idProducto: idProductoFinal,
-    idCategoria: null,
     ...resto,
   });
 };
@@ -325,8 +404,10 @@ export {
   limpiarDatos,
   crearClienteDePrueba,
   crearMedioPagoDePrueba,
+  crearMediosPagoSimuladosDePrueba,
   crearProductoDePrueba,
   crearUsuarioDePrueba,
+  crearVendedorIndependienteDePrueba,
   crearPromocionDePrueba,
   abrirConexionCruda,
   retenerBloqueoDeFila,

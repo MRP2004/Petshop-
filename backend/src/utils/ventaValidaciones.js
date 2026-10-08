@@ -12,7 +12,9 @@ import {
   validarImportePersistido,
   multiplicarCentavosSeguro,
   sumarCentavosSeguro,
+  limpiarCadenaOpcional,
 } from './validacion.js';
+import { esPersonalInterno, esCompradorRegistrado } from './roles.js';
 
 // Este módulo contiene la lógica de validación y cálculo propia del dominio
 // de ventas (detalles, subtotales, total). Las primitivas genéricas (números,
@@ -155,10 +157,85 @@ const prepararDetalles = (detalles) => {
   );
 };
 
+// Únicos dos valores reconocidos (coinciden con las opciones fijas que
+// ofrecen tanto el checkout del cliente como la carga manual del personal):
+// no es una lista abierta, para poder exigir domicilio de forma confiable
+// cuando corresponde entrega a domicilio. Compartido por venta.service.js
+// (carga manual) y compra.service.js (checkout con pago simulado) para no
+// duplicar esta regla en dos lugares.
+const METODOS_ENTREGA_VALIDOS = ['retiro en sucursal', 'envío a domicilio'];
+const LONGITUD_MINIMA_DIRECCION = 8;
+const LONGITUD_MAXIMA_DIRECCION = 200;
+
+// Envío a domicilio no puede confirmarse sin domicilio: si falta o es
+// demasiado corto para ser una dirección real, se rechaza la venta entera
+// (no se registra "a medias" con la entrega sin poder completarse). Para
+// "retiro en sucursal" (o sin método indicado) se ignora cualquier
+// dirección que igual se mande: no aplica, y no tiene sentido persistirla.
+const prepararEntrega = (datos) => {
+  const metodoEntregaCrudo =
+    typeof datos.metodoEntrega === 'string' ? datos.metodoEntrega.trim() : '';
+
+  if (!metodoEntregaCrudo) {
+    return { metodoEntrega: null, direccionEntrega: null };
+  }
+
+  if (!METODOS_ENTREGA_VALIDOS.includes(metodoEntregaCrudo)) {
+    throw new AppError(
+      `El método de entrega debe ser uno de: ${METODOS_ENTREGA_VALIDOS.join(', ')}`,
+      400,
+    );
+  }
+
+  if (metodoEntregaCrudo !== 'envío a domicilio') {
+    return { metodoEntrega: metodoEntregaCrudo, direccionEntrega: null };
+  }
+
+  const direccionEntrega = limpiarCadenaOpcional(datos.direccionEntrega, 'La dirección de entrega');
+
+  if (!direccionEntrega || direccionEntrega.length < LONGITUD_MINIMA_DIRECCION) {
+    throw new AppError(
+      `La dirección de entrega es obligatoria para envío a domicilio (mínimo ${LONGITUD_MINIMA_DIRECCION} caracteres)`,
+      400,
+    );
+  }
+
+  if (direccionEntrega.length > LONGITUD_MAXIMA_DIRECCION) {
+    throw new AppError(
+      `La dirección de entrega no puede superar los ${LONGITUD_MAXIMA_DIRECCION} caracteres`,
+      400,
+    );
+  }
+
+  return { metodoEntrega: metodoEntregaCrudo, direccionEntrega };
+};
+
+// Una venta le pertenece a un cliente autenticado si coincide el idCliente;
+// el personal (vendedor/administrador) puede operar sobre cualquiera. La usan
+// venta.service.js (listar/ver/cancelar) y compra.service.js/comprobante
+// (ver, descargar PDF, reenviar correo), así la regla de "solo mis compras"
+// vive en un único lugar.
+// Ronda 2, Etapa 8: un vendedor independiente TAMBIÉN puede ver su propia
+// compra como comprador (conserva idCliente) — mismo chequeo que
+// 'cliente', nunca el de personal interno. No cubre el otro caso nuevo de
+// esta etapa ("un vendedor independiente viendo una venta ajena porque
+// contiene un producto de su tienda"): ese es un acceso deliberadamente
+// MÁS RESTRINGIDO (solo sus propias líneas, nunca la venta completa), con
+// su propia función separada — ver tienda.service.js#obtenerVentaDeTiendaPorId.
+const esPropiaOPersonal = (usuario, idClienteVenta) => {
+  if (esPersonalInterno(usuario?.rol)) {
+    return true;
+  }
+
+  return esCompradorRegistrado(usuario?.rol) && usuario.idCliente === idClienteVenta;
+};
+
 export {
   validarEnteroPositivo,
   calcularSubtotalCentavos,
   acumularSubtotalGeneral,
   calcularTotalCentavos,
   prepararDetalles,
+  prepararEntrega,
+  esPropiaOPersonal,
 };

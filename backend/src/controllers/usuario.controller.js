@@ -2,6 +2,7 @@ import {
   registrarUsuario,
   crearUsuarioInterno,
   iniciarSesion,
+  obtenerPerfil,
 } from '../services/usuario.service.js';
 import { generarTokenCsrf } from '../utils/csrf.js';
 import {
@@ -60,13 +61,18 @@ const crearInterno = async (req, res, next) => {
   }
 };
 
-// Devuelve lo que ya está codificado en el propio token: no hace falta una
-// consulta adicional a la base para que el frontend sepa quién está
-// autenticado y con qué rol. También es la forma en que el frontend
-// recupera la sesión al cargar la página (ya no puede leer el JWT de
-// localStorage: está en una cookie HttpOnly).
-const perfil = (req, res) => {
-  res.status(200).json(req.usuario);
+// Ronda 2: ya no devuelve el payload del token tal cual (ver
+// usuario.service.js#obtenerPerfil) — hace una consulta fresca para poder
+// incluir nombre/apellido/email sin meterlos en el token. Sigue siendo la
+// forma en que el frontend recupera la sesión al cargar la página (ya no
+// puede leer el JWT de localStorage: está en una cookie HttpOnly).
+const perfil = async (req, res, next) => {
+  try {
+    const usuario = await obtenerPerfil(req.usuario.idUsuario);
+    res.status(200).json(usuario);
+  } catch (error) {
+    next(error);
+  }
 };
 
 export { registro, login, cerrarSesion, crearInterno, perfil };

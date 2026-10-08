@@ -1,19 +1,127 @@
 .home__hero {
-  background: #e3faf2;
-  border-bottom: 1px solid #c2f0e1;
-  padding: 48px 16px;
-  text-align: center;
+  background: var(--color-fondo-suave);
+  border-bottom: 1px solid var(--color-borde);
+  padding: 40px 0 48px;
 }
 
-.home__hero h1 {
+.home__hero-fila {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.home__hero-etiqueta {
+  display: inline-block;
+  background: var(--color-superficie);
   color: var(--color-marca-oscuro);
-  font-size: 1.8rem;
-  margin: 0 0 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: var(--radio-pildora);
+  margin: 0 0 14px;
 }
 
-.home__hero p {
+.home__hero-texto h1 {
+  color: var(--color-texto);
+  font-size: 1.9rem;
+  line-height: 1.15;
+  margin: 0 0 14px;
+}
+
+.home__hero-descripcion {
   color: var(--color-texto-suave);
-  margin: 0 0 20px;
+  margin: 0 0 22px;
+  max-width: 46ch;
+}
+
+.home__hero-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.home__hero-visual {
+  position: relative;
+  min-height: 220px;
+  overflow: hidden;
+  background: var(--color-fondo-suave);
+  border-radius: 24px;
+  border: 1px solid var(--color-borde);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.home__hero-foto {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.home__hero-tarjeta {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: 14px;
+  box-shadow: var(--sombra-hover);
+  padding: 8px 14px 8px 8px;
+  max-width: 190px;
+  color: inherit;
+}
+
+.home__hero-tarjeta:hover {
+  border-color: var(--color-marca);
+}
+
+.home__hero-tarjeta-imagen {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--color-fondo-suave);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex: none;
+  overflow: hidden;
+}
+
+.home__hero-tarjeta-imagen-real {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.home__hero-tarjeta-nombre {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.home__hero-tarjeta-precio {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--color-marca-oscuro);
+}
+
+.home__hero-tarjeta--0 {
+  top: -10px;
+  left: -10px;
+}
+
+.home__hero-tarjeta--1 {
+  bottom: -10px;
+  right: -10px;
 }
 
 .home__seccion {
@@ -23,17 +131,63 @@
 .home__seccion h2 {
   text-align: center;
   margin: 0 0 22px;
+  font-size: 1.4rem;
+}
+
+.home__mascotas {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.home__mascota-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 26px;
+  border-radius: 18px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--color-texto);
+}
+
+.home__mascota-tile span {
+  font-size: 1.4rem;
+}
+
+.home__mascota-tile--perro {
+  background: #fbe7dd;
+}
+
+.home__mascota-tile--gato {
+  background: #e3ecfb;
+}
+
+.home__mascota-tile:hover {
+  transform: translateY(-2px);
 }
 
 .home__categorias {
   display: flex;
   justify-content: center;
-  gap: 14px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
-.home__categorias a {
-  display: block;
+.home__categoria-pildora {
+  padding: 9px 20px;
+  border-radius: var(--radio-pildora);
+  background: var(--color-superficie);
+  border: 2px solid var(--color-borde-interactivo);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.home__categoria-pildora:hover {
+  border-color: var(--color-marca);
+  color: var(--color-marca-oscuro);
 }
 
 .home__grilla {
@@ -43,8 +197,22 @@
 }
 
 @media (min-width: 768px) {
-  .home__hero h1 {
-    font-size: 2.4rem;
+  .home__hero-fila {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .home__hero-texto,
+  .home__hero-visual {
+    flex: 1;
+  }
+
+  .home__hero-texto h1 {
+    font-size: 2.5rem;
+  }
+
+  .home__hero-visual {
+    min-height: 300px;
   }
 
   .home__grilla {

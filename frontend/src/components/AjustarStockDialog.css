@@ -1,0 +1,19 @@
+/* Reutiliza .confirm-dialog__fondo / .confirm-dialog / .confirm-dialog__error /
+   .confirm-dialog__acciones de ConfirmDialog.css (mismo look de diálogo
+   modal en toda la app) — se importa acá también para no depender de que
+   la página que use este diálogo ya haya importado ConfirmDialog.css por
+   su cuenta. */
+@import './ConfirmDialog.css';
+
+.ajustar-stock-dialog__actual {
+  margin: 0 0 16px;
+  color: var(--color-texto-suave);
+}
+
+.ajustar-stock-dialog__resultado {
+  margin: -4px 0 16px;
+}
+
+.ajustar-stock-dialog__resultado--invalido {
+  color: var(--color-peligro);
+}

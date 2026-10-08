@@ -3,6 +3,7 @@ import sequelize from '../config/database.js';
 import Categoria from './categoria.model.js';
 import TipoMascota from './tipoMascota.model.js';
 import Proveedor from './proveedor.model.js';
+import Tienda from './tienda.model.js';
 
 const Producto = sequelize.define(
   'Producto',
@@ -52,6 +53,16 @@ const Producto = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+
+    // Ronda 2, Etapa 8 (marketplace): NULL = catálogo de PetShop (todo lo
+    // que existe hoy, sin ningún cambio); un valor real = producto propio
+    // de un vendedor independiente. Columna nueva NULLABLE (ver
+    // backend/scripts/migracionRonda2Etapa8.js) — ninguna fila existente
+    // se toca, todas quedan en NULL.
+    idTienda: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
   },
   {
     tableName: 'producto',
@@ -86,6 +97,16 @@ Producto.belongsTo(Categoria, {
 
 Categoria.hasMany(Producto, {
   foreignKey: 'idCategoria',
+  as: 'productos',
+});
+
+Producto.belongsTo(Tienda, {
+  foreignKey: 'idTienda',
+  as: 'tienda',
+});
+
+Tienda.hasMany(Producto, {
+  foreignKey: 'idTienda',
   as: 'productos',
 });
 

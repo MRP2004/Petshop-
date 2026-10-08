@@ -1,6 +1,7 @@
 import sequelize from '../config/database.js';
 import Usuario from '../models/usuario.model.js';
 import Cliente from '../models/cliente.model.js';
+import Tienda from '../models/tienda.model.js';
 import AppError from '../errors/AppError.js';
 import { hashearContrasena, verificarContrasena } from '../utils/contrasenas.js';
 import { firmarToken } from '../utils/token.js';
@@ -92,21 +93,87 @@ const crearUsuarioInterno = async (datos) => {
   };
 };
 
-// El objeto "usuario" que se devuelve acá es exactamente lo mismo que
-// después va a poder leer el frontend en cualquier momento via GET
-// /api/usuarios/perfil (que devuelve el payload ya decodificado del
-// token): mismo shape en los dos casos, a propósito, para que el estado de
-// sesión en el frontend no cambie de forma según de dónde vino (login vs.
-// recarga de página). Por eso no incluye email: el token tampoco lo lleva
-// ("el token solo lleva lo necesario para autorizar", ver firmarToken).
-const iniciarSesionConUsuario = (usuario) => ({
-  token: firmarToken(usuario),
-  usuario: {
+// Ronda 2 (ver docs/frontend-diseno.md): el encabezado necesita mostrar el
+// nombre de quien inició sesión, algo que el token JAMÁS lleva (ver
+// firmarToken: "el token solo lleva lo necesario para autorizar") — a
+// propósito, para no arrastrar un nombre desactualizado si el cliente edita
+// su perfil después de loguearse, y para no agrandar el token con datos que
+// no hacen falta para autorizar nada. En vez de eso, tanto el login/registro
+// como GET /api/usuarios/perfil arman este mismo objeto con una consulta
+// fresca a la base (ver obtenerPerfil más abajo) — mismo shape en los dos
+// casos, a propósito, para que el estado de sesión en el frontend no cambie
+// de forma según de dónde vino (login vs. recarga de página). `nombre`/
+// `apellido` quedan en null para vendedor/administrador (no tienen Cliente
+// asociado); `contrasenaHash` nunca se incluye.
+// Ronda 2, Etapa 8 (marketplace): un vendedor independiente puede tener
+// tienda SUSPENDIDA (ver tienda.service.js) sin dejar de ser vendedor — el
+// `idTienda` viaja igual (autoriza "esta cuenta es dueña de esa tienda"),
+// la suspensión se vuelve a comprobar en cada escritura real (nunca se
+// confía en esto solo para decidir si algo se puede escribir).
+const resolverIdTienda = async (usuario) => {
+  if (usuario.rol !== 'vendedor_independiente') return null;
+  const tienda = await Tienda.findOne({ where: { idUsuario: usuario.idUsuario } });
+  return tienda?.idTienda ?? null;
+};
+
+const construirPerfilPublico = async (usuario) => {
+  let nombre = null;
+  let apellido = null;
+
+  if (usuario.idCliente) {
+    const cliente = await Cliente.findByPk(usuario.idCliente);
+    if (cliente) {
+      nombre = cliente.nombre;
+      apellido = cliente.apellido;
+    }
+  }
+
+  const idTienda = await resolverIdTienda(usuario);
+
+  return {
     idUsuario: usuario.idUsuario,
     rol: usuario.rol,
     idCliente: usuario.idCliente,
-  },
-});
+    idTienda,
+    email: usuario.email,
+    nombre,
+    apellido,
+  };
+};
+
+const iniciarSesionConUsuario = async (usuario) => {
+  const idTienda = await resolverIdTienda(usuario);
+
+  return {
+    // Se arma a mano (no `usuario.get({ plain: true })`): firmarToken ya
+    // toma exactamente los campos que necesita, y esto evita depender de
+    // que `usuario` sea siempre una instancia real de Sequelize (algunas
+    // pruebas pasan un objeto plano ya "resuelto").
+    token: firmarToken({
+      idUsuario: usuario.idUsuario,
+      rol: usuario.rol,
+      idCliente: usuario.idCliente,
+      idTienda,
+    }),
+    usuario: await construirPerfilPublico(usuario),
+  };
+};
+
+// GET /api/usuarios/perfil: a diferencia de antes, ya NO devuelve el payload
+// del token tal cual (ver git history) — hace esta consulta fresca para
+// poder incluir nombre/apellido/email sin tener que meterlos en el token.
+// Si el usuario ya no existe (cuenta borrada después de emitido el token,
+// caso hoy no alcanzable por ningún endpoint pero cubierto igual), se trata
+// como sesión inválida, no como un 500.
+const obtenerPerfil = async (idUsuario) => {
+  const usuario = await Usuario.findByPk(idUsuario);
+
+  if (!usuario) {
+    throw new AppError('Sesión inválida', 401);
+  }
+
+  return construirPerfilPublico(usuario);
+};
 
 const iniciarSesion = async (datos) => {
   const { email, password } = prepararCredenciales(datos);
@@ -122,4 +189,4 @@ const iniciarSesion = async (datos) => {
   return iniciarSesionConUsuario(usuario);
 };
 
-export { registrarUsuario, crearUsuarioInterno, iniciarSesion };
+export { registrarUsuario, crearUsuarioInterno, iniciarSesion, obtenerPerfil };

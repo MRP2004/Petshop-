@@ -17,15 +17,19 @@ const obtenerClave = () => {
 
 const DURACION_TOKEN = '8h';
 
-// El token solo lleva lo necesario para autorizar: id, rol y, si es cliente,
-// el idCliente vinculado (así una compra pública deriva idCliente del token
-// en vez de confiar en lo que mande el navegador).
+// El token solo lleva lo necesario para autorizar: id, rol, idCliente (si
+// aplica) e idTienda (ronda 2, Etapa 8 — marketplace: solo si aplica). Un
+// vendedor independiente conserva idCliente (sigue siendo comprador, ver
+// usuario.model.js) Y lleva idTienda (para poder autorizar por tienda sin
+// una consulta extra en cada pedido) — los dos campos pueden convivir en el
+// mismo token.
 const firmarToken = (usuario) =>
   jwt.sign(
     {
       idUsuario: usuario.idUsuario,
       rol: usuario.rol,
       idCliente: usuario.idCliente,
+      idTienda: usuario.idTienda ?? null,
     },
     obtenerClave(),
     { expiresIn: DURACION_TOKEN },

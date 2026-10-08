@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { EstadoCarga, EstadoError, EstadoVacio } from './EstadosSolicitud.jsx';
+import ConfirmDialog from './ConfirmDialog.jsx';
 import useCargaDatos from '../hooks/useCargaDatos.js';
 import './GestionEntidad.css';
 
@@ -50,6 +51,9 @@ const GestionEntidad = ({ titulo, servicio, campos, columnas, idCampo, renderAcc
   const [formulario, setFormulario] = useState({});
   const [errorFormulario, setErrorFormulario] = useState(null);
   const [guardando, setGuardando] = useState(false);
+  const [filaABorrar, setFilaABorrar] = useState(null); // null = diálogo cerrado
+  const [borrando, setBorrando] = useState(false);
+  const [errorBorrado, setErrorBorrado] = useState(null);
 
   const abrirAlta = () => {
     setFormulario(formularioVacio(campos));
@@ -104,14 +108,29 @@ const GestionEntidad = ({ titulo, servicio, campos, columnas, idCampo, renderAcc
     }
   };
 
-  const eliminar = async (fila) => {
-    if (!window.confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) return;
+  const pedirBorrado = (fila) => {
+    setErrorBorrado(null);
+    setFilaABorrar(fila);
+  };
 
+  const cancelarBorrado = () => {
+    if (borrando) return;
+    setFilaABorrar(null);
+    setErrorBorrado(null);
+  };
+
+  const confirmarBorrado = async () => {
+    if (borrando) return;
+    setBorrando(true);
+    setErrorBorrado(null);
     try {
-      await servicio.eliminar(fila[idCampo]);
+      await servicio.eliminar(filaABorrar[idCampo]);
+      setFilaABorrar(null);
       recargar();
     } catch (err) {
-      window.alert(err.message);
+      setErrorBorrado(err.message);
+    } finally {
+      setBorrando(false);
     }
   };
 
@@ -151,7 +170,7 @@ const GestionEntidad = ({ titulo, servicio, campos, columnas, idCampo, renderAcc
                     <button type="button" className="boton-enlace" onClick={() => abrirEdicion(fila)}>
                       Editar
                     </button>
-                    <button type="button" className="boton-enlace" onClick={() => eliminar(fila)}>
+                    <button type="button" className="boton-enlace" onClick={() => pedirBorrado(fila)}>
                       Eliminar
                     </button>
                     {renderAccionesExtra && renderAccionesExtra(fila, recargar)}
@@ -206,6 +225,8 @@ const GestionEntidad = ({ titulo, servicio, campos, columnas, idCampo, renderAcc
                           : 'text'
                     }
                     step={campo.tipo === 'decimal' ? '0.01' : undefined}
+                    min={campo.min}
+                    max={campo.max}
                     value={formulario[campo.nombre] ?? ''}
                     onChange={actualizarCampo(campo.nombre)}
                     required={campo.requerido}
@@ -227,6 +248,19 @@ const GestionEntidad = ({ titulo, servicio, campos, columnas, idCampo, renderAcc
           </form>
         </div>
       )}
+
+      <ConfirmDialog
+        abierto={filaABorrar !== null}
+        titulo="¿Eliminar este registro?"
+        mensaje="Esta acción no se puede deshacer."
+        textoConfirmar={borrando ? 'Eliminando…' : 'Eliminar'}
+        textoCancelar="Cancelar"
+        peligro
+        cargando={borrando}
+        error={errorBorrado}
+        onConfirmar={confirmarBorrado}
+        onCancelar={cancelarBorrado}
+      />
     </div>
   );
 };

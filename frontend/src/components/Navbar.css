@@ -6,54 +6,96 @@
   z-index: 20;
 }
 
-.navbar__fila {
+.navbar__topbar {
+  background: var(--color-texto);
+  color: #f4ede2;
+}
+
+.navbar__topbar p {
+  margin: 0;
+  padding: 7px 16px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.navbar__principal {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 14px 16px;
+}
+
+.navbar__hamburguesa {
+  order: -1;
+  background: none;
+  border: 1px solid var(--color-borde-interactivo);
+  border-radius: 10px;
+  width: 38px;
+  height: 38px;
+  font-size: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .navbar__marca {
-  font-size: 1.4rem;
+  font-family: var(--fuente-titulo);
+  font-size: 1.5rem;
   font-weight: 800;
-  color: var(--color-marca);
+  color: var(--color-marca-oscuro);
   white-space: nowrap;
+}
+
+.navbar__volver {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--color-texto-suave);
+  font-size: 0.9rem;
+}
+
+.navbar__volver:hover {
+  color: var(--color-marca-oscuro);
 }
 
 .navbar__buscador {
   display: flex;
-  flex: 1 1 100%;
-  order: 3;
 }
 
 .navbar__buscador input {
   flex: 1;
-  padding: 9px 14px;
-  border: 1px solid var(--color-borde);
-  border-radius: 20px 0 0 20px;
+  padding: 10px 16px;
+  border: 1px solid var(--color-borde-interactivo);
+  border-radius: var(--radio-pildora) 0 0 var(--radio-pildora);
   border-right: none;
   outline: none;
+  background: var(--color-fondo);
 }
 
 .navbar__buscador input:focus {
   border-color: var(--color-marca);
+  background: var(--color-superficie);
 }
 
 .navbar__boton-buscar {
-  border: 1px solid var(--color-borde);
-  background: var(--color-fondo);
-  border-radius: 0 20px 20px 0;
-  padding: 0 16px;
+  /* marca-oscuro, no marca: el ícono de esta ronda ya no es solo
+     decorativo (aria-label="Buscar" en el botón) y blanco sobre
+     --color-marca da ~3.48:1, no llega a AA (hallazgo de Codex). */
+  border: 1px solid var(--color-borde-interactivo);
+  background: var(--color-marca-oscuro);
+  color: #fff;
+  border-radius: 0 var(--radio-pildora) var(--radio-pildora) 0;
+  padding: 0 18px;
 }
 
 .navbar__acciones {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
   margin-left: auto;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 0.88rem;
+  font-weight: 700;
 }
 
 .navbar__accion {
@@ -61,22 +103,11 @@
   align-items: center;
   gap: 4px;
   white-space: nowrap;
-}
-
-.navbar__accion--boton {
-  background: none;
-  border: none;
-  font: inherit;
-  font-weight: 600;
   color: var(--color-texto);
-  padding: 0;
 }
 
-.navbar__error-logout {
-  color: var(--color-peligro);
-  font-size: 0.78rem;
-  font-weight: 600;
-  white-space: normal;
+.navbar__accion:hover {
+  color: var(--color-marca-oscuro);
 }
 
 .navbar__carrito {
@@ -84,6 +115,9 @@
 }
 
 .navbar__contador {
+  /* --color-peligro, no --color-acento: el contador es un aviso ("tenés N
+     items"), no una promoción — terracota queda reservado para ofertas
+     (ver index.css). Además blanco sobre terracota no llega a AA (~3.12:1). */
   background: var(--color-peligro);
   color: #fff;
   font-size: 0.7rem;
@@ -97,30 +131,97 @@
   padding: 0 4px;
 }
 
-.navbar__categorias {
-  display: flex;
-  gap: 18px;
-  overflow-x: auto;
-  padding: 8px 16px 12px;
-  font-size: 0.88rem;
-  font-weight: 600;
+.navbar__nav {
+  display: none;
+  align-items: center;
+  gap: 22px;
+  padding: 4px 16px 14px;
+  font-size: 0.9rem;
   color: var(--color-texto-suave);
   border-top: 1px solid var(--color-borde);
 }
 
-.navbar__categorias a:hover {
-  color: var(--color-marca);
+.navbar__nav-enlace {
+  font-weight: 700;
+  color: var(--color-texto);
+  padding: 8px 2px;
+}
+
+.navbar__nav-enlace:hover {
+  color: var(--color-marca-oscuro);
+}
+
+.navbar__nav-enlace--promo {
+  /* acento-oscuro, no acento: terracota puro como texto sobre blanco da
+     ~3.12:1 (no llega a AA); acento-oscuro da ~4.64:1. */
+  color: var(--color-acento-oscuro);
+}
+
+.navbar__nav-enlace--promo:hover {
+  text-decoration: underline;
+}
+
+.navbar__panel-movil {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 16px 16px;
+  border-top: 1px solid var(--color-borde);
+  gap: 2px;
+}
+
+.navbar__panel-movil > a {
+  padding: 12px 4px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--color-borde);
+}
+
+.navbar__acordeon {
+  border-bottom: 1px solid var(--color-borde);
+}
+
+.navbar__acordeon summary {
+  padding: 12px 4px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.navbar__acordeon summary::-webkit-details-marker {
+  display: none;
+}
+
+.navbar__acordeon summary::after {
+  content: '▾';
+  margin-left: 8px;
+  color: var(--color-texto-suave);
+}
+
+.navbar__acordeon a {
+  display: block;
+  padding: 10px 4px 10px 16px;
+  color: var(--color-texto-suave);
+  font-weight: 600;
+  font-size: 0.92rem;
 }
 
 @media (min-width: 768px) {
-  .navbar__fila {
-    flex-wrap: nowrap;
-    padding: 14px 16px;
+  .navbar__hamburguesa,
+  .navbar__panel-movil {
+    display: none;
   }
 
-  .navbar__buscador {
+  .navbar__principal {
+    flex-wrap: nowrap;
+    padding: 16px;
+  }
+
+  .buscador-predictivo {
     flex: 1;
     order: 0;
     max-width: 480px;
+  }
+
+  .navbar__nav {
+    display: flex;
   }
 }

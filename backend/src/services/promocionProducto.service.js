@@ -1,19 +1,18 @@
+import { Op } from 'sequelize';
+import sequelize from '../config/database.js';
 import PromocionProducto from '../models/promocionProducto.model.js';
 import Producto from '../models/producto.model.js';
-import Categoria from '../models/categoria.model.js';
 import AppError from '../errors/AppError.js';
 import {
   MAXIMO_ENTERO_POSITIVO,
   esObjetoPlano,
   validarEnteroEnRango,
-  prepararEnteroOpcional,
   analizarNumero,
 } from '../utils/validacion.js';
+import obtenerFechaArgentina from '../utils/fechaArgentina.js';
 
-// Máximo representable por una columna DECIMAL(5,2): no se asume que
-// "descuento" sea necesariamente un porcentaje (0-100), esa semántica sigue
-// sin confirmarse; solo se valida el rango que la columna admite.
-const MAXIMO_DESCUENTO = 999.99;
+const MINIMO_DESCUENTO = 1;
+const MAXIMO_DESCUENTO = 100;
 
 const PATRON_FECHA = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -74,10 +73,20 @@ const prepararDatos = (datos) => {
   }
 
   const descuento = analizarNumero(datos.descuento);
+  const textoDescuento =
+    typeof datos.descuento === 'string'
+      ? datos.descuento.trim()
+      : String(datos.descuento);
+  const decimales = /\.(\d+)$/.exec(textoDescuento)?.[1] || '';
 
-  if (descuento === null || descuento < 0 || descuento > MAXIMO_DESCUENTO) {
+  if (
+    descuento === null ||
+    descuento < MINIMO_DESCUENTO ||
+    descuento > MAXIMO_DESCUENTO ||
+    decimales.length > 2
+  ) {
     throw new AppError(
-      `El descuento debe ser un número entre 0 y ${MAXIMO_DESCUENTO}`,
+      `El descuento debe ser un porcentaje entre ${MINIMO_DESCUENTO} y ${MAXIMO_DESCUENTO}`,
       400,
     );
   }
@@ -89,48 +98,94 @@ const prepararDatos = (datos) => {
     'El ID del producto no es válido',
   );
 
-  const idCategoria = prepararEnteroOpcional(
-    datos.idCategoria,
-    1,
-    MAXIMO_ENTERO_POSITIVO,
-    'El ID de la categoría no es válido',
-  );
-
   return {
     fechaInicio,
     fechaFin,
     descuento: descuento.toFixed(2),
     idProducto,
-    idCategoria,
   };
 };
 
-const comprobarRelaciones = async ({ idProducto, idCategoria }) => {
-  const producto = await Producto.findByPk(idProducto);
+const comprobarProducto = async (idProducto, transaction) => {
+  const producto = await Producto.findByPk(idProducto, {
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
 
   if (!producto) {
     throw new AppError('El producto indicado no existe', 400);
   }
+};
 
-  if (idCategoria) {
-    const categoria = await Categoria.findByPk(idCategoria);
+const bloquearProductos = async (idsProducto, transaction) => {
+  const idsUnicosOrdenados = [...new Set(idsProducto)].sort((a, b) => a - b);
 
-    if (!categoria) {
-      throw new AppError('La categoría indicada no existe', 400);
-    }
+  for (const idProducto of idsUnicosOrdenados) {
+    await comprobarProducto(idProducto, transaction);
   }
 };
 
-const relaciones = [
-  { model: Producto, as: 'producto' },
-  { model: Categoria, as: 'categoria' },
-];
+const comprobarSinSuperposicion = async (
+  { idProducto, fechaInicio, fechaFin },
+  transaction,
+  idExcluir = null,
+) => {
+  const where = {
+    idProducto,
+    fechaInicio: { [Op.lte]: fechaFin },
+    fechaFin: { [Op.gte]: fechaInicio },
+  };
 
-const obtenerPromociones = async () => {
+  if (idExcluir !== null) {
+    where.idPromocionProducto = { [Op.ne]: idExcluir };
+  }
+
+  const existente = await PromocionProducto.findOne({ where, transaction });
+
+  if (existente) {
+    throw new AppError(
+      'El producto ya tiene una promoción que se superpone con ese período',
+      409,
+    );
+  }
+};
+
+const relaciones = [{ model: Producto, as: 'producto' }];
+
+const obtenerPromociones = async (fecha = obtenerFechaArgentina()) => {
   return PromocionProducto.findAll({
+    include: relaciones,
+    where: {
+      fechaInicio: { [Op.lte]: fecha },
+      fechaFin: { [Op.gte]: fecha },
+    },
+    order: [['fechaInicio', 'DESC']],
+  });
+};
+
+const obtenerTodasLasPromociones = async () =>
+  PromocionProducto.findAll({
     include: relaciones,
     order: [['fechaInicio', 'DESC']],
   });
+
+const obtenerPromocionPublicaPorId = async (id) => {
+  const idPromocionProducto = validarId(id);
+  const fecha = obtenerFechaArgentina();
+  const promocion = await PromocionProducto.findOne({
+    where: {
+      idPromocionProducto,
+      fechaInicio: { [Op.lte]: fecha },
+      fechaFin: { [Op.gte]: fecha },
+    },
+    include: relaciones,
+  });
+
+  if (!promocion) {
+    throw new AppError('Promoción vigente no encontrada', 404);
+  }
+
+  return promocion;
 };
 
 const obtenerPromocionPorId = async (id) => {
@@ -150,37 +205,90 @@ const obtenerPromocionPorId = async (id) => {
 const crearPromocion = async (datos) => {
   const datosPreparados = prepararDatos(datos);
 
-  await comprobarRelaciones(datosPreparados);
+  const idPromocionProducto = await sequelize.transaction(async (transaction) => {
+    await comprobarProducto(datosPreparados.idProducto, transaction);
+    await comprobarSinSuperposicion(datosPreparados, transaction);
+    const promocion = await PromocionProducto.create(datosPreparados, { transaction });
+    return promocion.idPromocionProducto;
+  });
 
-  const promocion = await PromocionProducto.create(datosPreparados);
-
-  return obtenerPromocionPorId(promocion.idPromocionProducto);
+  return obtenerPromocionPorId(idPromocionProducto);
 };
 
 const actualizarPromocion = async (id, datos) => {
   const idPromocionProducto = validarId(id);
   const datosPreparados = prepararDatos(datos);
 
-  const promocion = await PromocionProducto.findByPk(idPromocionProducto);
+  await sequelize.transaction(async (transaction) => {
+    const promocionInicial = await PromocionProducto.findByPk(idPromocionProducto, {
+      transaction,
+    });
 
-  if (!promocion) {
-    throw new AppError('Promoción no encontrada', 404);
-  }
+    if (!promocionInicial) {
+      throw new AppError('Promoción no encontrada', 404);
+    }
 
-  await comprobarRelaciones(datosPreparados);
-  await promocion.update(datosPreparados);
+    await bloquearProductos(
+      [promocionInicial.idProducto, datosPreparados.idProducto],
+      transaction,
+    );
+
+    const promocion = await PromocionProducto.findByPk(idPromocionProducto, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (
+      !promocion ||
+      promocion.idProducto !== promocionInicial.idProducto
+    ) {
+      throw new AppError(
+        'La promoción cambió mientras se editaba; volvé a intentarlo',
+        409,
+      );
+    }
+
+    await comprobarSinSuperposicion(datosPreparados, transaction, idPromocionProducto);
+    await promocion.update(datosPreparados, { transaction });
+  });
 
   return obtenerPromocionPorId(idPromocionProducto);
 };
 
 const eliminarPromocion = async (id) => {
-  const promocion = await obtenerPromocionPorId(id);
+  const idPromocionProducto = validarId(id);
 
-  await promocion.destroy();
+  await sequelize.transaction(async (transaction) => {
+    const promocionInicial = await PromocionProducto.findByPk(idPromocionProducto, {
+      transaction,
+    });
+
+    if (!promocionInicial) {
+      throw new AppError('Promoción no encontrada', 404);
+    }
+
+    await bloquearProductos([promocionInicial.idProducto], transaction);
+
+    const promocion = await PromocionProducto.findByPk(idPromocionProducto, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!promocion || promocion.idProducto !== promocionInicial.idProducto) {
+      throw new AppError(
+        'La promoción cambió mientras se eliminaba; volvé a intentarlo',
+        409,
+      );
+    }
+
+    await promocion.destroy({ transaction });
+  });
 };
 
 export {
   obtenerPromociones,
+  obtenerTodasLasPromociones,
+  obtenerPromocionPublicaPorId,
   obtenerPromocionPorId,
   crearPromocion,
   actualizarPromocion,

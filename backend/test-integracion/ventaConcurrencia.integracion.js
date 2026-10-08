@@ -13,6 +13,7 @@ import {
   registrarVenta,
   cancelarVenta,
   marcarVentaComoEnviada,
+  marcarVentaComoEntregada,
   obtenerVentaPorId,
 } from '../src/services/venta.service.js';
 import { ajustarStockProducto } from '../src/services/producto.service.js';
@@ -28,6 +29,7 @@ import {
 
 let cliente;
 let medioPago;
+const usuarioVendedor = { idUsuario: 999, rol: 'vendedor', idCliente: null };
 
 before(async () => {
   await prepararEsquema();
@@ -205,7 +207,7 @@ test('rollback real: un fallo después de escrituras reales dentro de la transac
   assert.equal(productoBAntesDeCancelar.stockActual, MAXIMO_ENTERO_POSITIVO);
 
   await assert.rejects(
-    () => cancelarVenta(venta.idVenta),
+    () => cancelarVenta(venta.idVenta, usuarioVendedor),
     (error) => error.statusCode === 409,
   );
 
@@ -282,7 +284,7 @@ test('un total final fuera de rango se rechaza aunque cada subtotal individual s
       }),
     (error) =>
       error.statusCode === 400 &&
-      error.message === 'El total de la venta supera el máximo permitido',
+        error.message === 'El total de la compra supera el máximo permitido',
   );
 
   assert.equal(await Venta.count(), 0);
@@ -297,7 +299,7 @@ test('cancelar una venta restituye exactamente el stock vendido', async () => {
     detalles: [{ idProducto: producto.idProducto, cantidad: 4 }],
   });
 
-  const ventaCancelada = await cancelarVenta(venta.idVenta);
+  const ventaCancelada = await cancelarVenta(venta.idVenta, usuarioVendedor);
   assert.equal(ventaCancelada.estado, 'cancelada');
 
   const productoActualizado = await Producto.findByPk(producto.idProducto);
@@ -313,10 +315,10 @@ test('cancelar una venta ya cancelada (secuencial) responde 409 y no vuelve a re
     detalles: [{ idProducto: producto.idProducto, cantidad: 4 }],
   });
 
-  await cancelarVenta(venta.idVenta);
+  await cancelarVenta(venta.idVenta, usuarioVendedor);
 
   await assert.rejects(
-    () => cancelarVenta(venta.idVenta),
+    () => cancelarVenta(venta.idVenta, usuarioVendedor),
     (error) =>
       error.statusCode === 409 &&
       error.message === 'Solo se pueden cancelar ventas registradas',
@@ -344,12 +346,138 @@ test('marcar como enviada cambia el estado; enviar o cancelar de nuevo se rechaz
   );
 
   await assert.rejects(
-    () => cancelarVenta(venta.idVenta),
+    () => cancelarVenta(venta.idVenta, usuarioVendedor),
     (error) => error.statusCode === 409,
   );
 
   const productoActualizado = await Producto.findByPk(producto.idProducto);
   assert.equal(productoActualizado.stockActual, 8);
+});
+
+// Ronda 2, Etapa 7 (estados de pedido): marcarVentaComoEnviada bifurca por
+// metodoEntrega; marcarVentaComoEntregada es la única vía hacia el estado
+// final real. Diseño de esquema revisado con Codex antes de escribir esto
+// — ver docs/estado-proyecto.md.
+test('registrada + envío a domicilio: marcarVentaComoEnviada pasa a "enviada" (sin cambios)', async () => {
+  const producto = await crearProductoDePrueba({ stockActual: 10 });
+  const venta = await registrarVenta({
+    idCliente: cliente.idCliente,
+    idMedioPago: medioPago.idMedioPago,
+    detalles: [{ idProducto: producto.idProducto, cantidad: 1 }],
+    metodoEntrega: 'envío a domicilio',
+    direccionEntrega: 'Calle Falsa 123, piso 4',
+  });
+
+  const actualizada = await marcarVentaComoEnviada(venta.idVenta);
+  assert.equal(actualizada.estado, 'enviada');
+});
+
+test('registrada + retiro en sucursal: marcarVentaComoEnviada pasa a "lista_para_retirar" (nuevo)', async () => {
+  const producto = await crearProductoDePrueba({ stockActual: 10 });
+  const venta = await registrarVenta({
+    idCliente: cliente.idCliente,
+    idMedioPago: medioPago.idMedioPago,
+    detalles: [{ idProducto: producto.idProducto, cantidad: 1 }],
+    metodoEntrega: 'retiro en sucursal',
+  });
+
+  const actualizada = await marcarVentaComoEnviada(venta.idVenta);
+  assert.equal(actualizada.estado, 'lista_para_retirar');
+});
+
+test('registrada + metodoEntrega ausente (venta legada): marcarVentaComoEnviada sigue yendo a "enviada" (fallback legado, no se infiere retiro)', async () => {
+  const producto = await crearProductoDePrueba({ stockActual: 10 });
+  const venta = await registrarVenta({
+    idCliente: cliente.idCliente,
+    idMedioPago: medioPago.idMedioPago,
+    detalles: [{ idProducto: producto.idProducto, cantidad: 1 }],
+  });
+
+  assert.equal(venta.metodoEntrega, null);
+  const actualizada = await marcarVentaComoEnviada(venta.idVenta);
+  assert.equal(actualizada.estado, 'enviada');
+});
+
+test('marcarVentaComoEntregada: desde "enviada" pasa a "entregada"', async () => {
+  const producto = await crearProductoDePrueba({ stockActual: 10 });
+  const venta = await registrarVenta({
+    idCliente: cliente.idCliente,
+    idMedioPago: medioPago.idMedioPago,
+    detalles: [{ idProducto: producto.idProducto, cantidad: 1 }],
+    metodoEntrega: 'envío a domicilio',
+    direccionEntrega: 'Calle Falsa 123, piso 4',
+  });
+  await marcarVentaComoEnviada(venta.idVenta);
+
+  const entregada = await marcarVentaComoEntregada(venta.idVenta);
+  assert.equal(entregada.estado, 'entregada');
+});
+
+test('marcarVentaComoEntregada: desde "lista_para_retirar" pasa a "entregada"', async () => {
+  const producto = await crearProductoDePrueba({ stockActual: 10 });
+  const venta = await registrarVenta({
+    idCliente: cliente.idCliente,
+    idMedioPago: medioPago.idMedioPago,
+    detalles: [{ idProducto: producto.idProducto, cantidad: 1 }],
+    metodoEntrega: 'retiro en sucursal',
+  });
+  await marcarVentaComoEnviada(venta.idVenta);
+
+  const entregada = await marcarVentaComoEntregada(venta.idVenta);
+  assert.equal(entregada.estado, 'entregada');
+});
+
+test('marcarVentaComoEntregada rechaza intentar "entregar" directamente una venta "registrada" (sin saltear el hito intermedio)', async () => {
+  const producto = await crearProductoDePrueba({ stockActual: 10 });
+  const venta = await registrarVenta({
+    idCliente: cliente.idCliente,
+    idMedioPago: medioPago.idMedioPago,
+    detalles: [{ idProducto: producto.idProducto, cantidad: 1 }],
+  });
+
+  await assert.rejects(
+    () => marcarVentaComoEntregada(venta.idVenta),
+    (error) => error.statusCode === 409,
+  );
+});
+
+test('marcarVentaComoEntregada rechaza una venta "cancelada", y "entregada" no admite ningún avance más', async () => {
+  const producto = await crearProductoDePrueba({ stockActual: 10 });
+  const ventaCancelada = await registrarVenta({
+    idCliente: cliente.idCliente,
+    idMedioPago: medioPago.idMedioPago,
+    detalles: [{ idProducto: producto.idProducto, cantidad: 1 }],
+  });
+  await cancelarVenta(ventaCancelada.idVenta, usuarioVendedor);
+
+  await assert.rejects(
+    () => marcarVentaComoEntregada(ventaCancelada.idVenta),
+    (error) => error.statusCode === 409,
+  );
+
+  const otroProducto = await crearProductoDePrueba({ stockActual: 10 });
+  const ventaEntregada = await registrarVenta({
+    idCliente: cliente.idCliente,
+    idMedioPago: medioPago.idMedioPago,
+    detalles: [{ idProducto: otroProducto.idProducto, cantidad: 1 }],
+    metodoEntrega: 'envío a domicilio',
+    direccionEntrega: 'Calle Falsa 123, piso 4',
+  });
+  await marcarVentaComoEnviada(ventaEntregada.idVenta);
+  await marcarVentaComoEntregada(ventaEntregada.idVenta);
+
+  await assert.rejects(
+    () => marcarVentaComoEntregada(ventaEntregada.idVenta),
+    (error) => error.statusCode === 409,
+  );
+  await assert.rejects(
+    () => marcarVentaComoEnviada(ventaEntregada.idVenta),
+    (error) => error.statusCode === 409,
+  );
+  await assert.rejects(
+    () => cancelarVenta(ventaEntregada.idVenta, usuarioVendedor),
+    (error) => error.statusCode === 409,
+  );
 });
 
 test('concurrencia real (contención confirmada): cancelar y enviar al mismo tiempo, solo una transición exitosa', async () => {
@@ -364,7 +492,7 @@ test('concurrencia real (contención confirmada): cancelar y enviar al mismo tie
   const resultados = await ejecutarConContencionReal(
     { tabla: 'venta', columnaId: 'idVenta', id: venta.idVenta },
     [
-      () => cancelarVenta(venta.idVenta),
+      () => cancelarVenta(venta.idVenta, usuarioVendedor),
       () => marcarVentaComoEnviada(venta.idVenta),
     ],
   );
@@ -398,7 +526,10 @@ test('concurrencia real (contención confirmada): dos cancelaciones simultáneas
 
   const resultados = await ejecutarConContencionReal(
     { tabla: 'venta', columnaId: 'idVenta', id: venta.idVenta },
-    [() => cancelarVenta(venta.idVenta), () => cancelarVenta(venta.idVenta)],
+    [
+      () => cancelarVenta(venta.idVenta, usuarioVendedor),
+      () => cancelarVenta(venta.idVenta, usuarioVendedor),
+    ],
   );
 
   const exitosas = resultados.filter((r) => r.status === 'fulfilled');

@@ -22,6 +22,23 @@
   object-fit: cover;
 }
 
+.producto-detalle__titulo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.producto-detalle__titulo h1 {
+  margin: 0;
+}
+
+.producto-detalle__vendedor {
+  font-size: 0.85rem;
+  color: var(--color-texto-suave);
+  margin: 0 0 8px;
+}
+
 .producto-detalle__descripcion {
   color: var(--color-texto-suave);
 }

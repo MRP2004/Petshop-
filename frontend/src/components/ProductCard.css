@@ -1,23 +1,43 @@
 .product-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   background: var(--color-superficie);
   border: 1px solid var(--color-borde);
   border-radius: var(--radio-borde);
-  padding: 16px;
+  padding: 14px;
   box-shadow: var(--sombra);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.product-card:hover {
+  box-shadow: var(--sombra-hover);
+  transform: translateY(-2px);
+}
+
+/* Envuelve solo la parte navegable (imagen, nombre, precio, stock): el
+   contenedor de la tarjeta ya no es un único <Link> (ver ProductCard.jsx,
+   hallazgo real de Codex sobre controles interactivos anidados). */
+.product-card__enlace {
+  display: flex;
+  flex-direction: column;
   color: inherit;
+  text-decoration: none;
+}
+
+.product-card__imagen-envoltorio {
+  position: relative;
+  margin-bottom: 12px;
 }
 
 .product-card__imagen {
   font-size: 2.6rem;
-  background: var(--color-fondo);
-  border-radius: var(--radio-borde);
+  background: var(--color-fondo-suave);
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 110px;
-  margin-bottom: 12px;
+  height: 120px;
   overflow: hidden;
 }
 
@@ -27,26 +47,62 @@
   object-fit: cover;
 }
 
+.product-card__chip {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radio-pildora);
+  color: #fff;
+}
+
+.product-card__favorito {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.product-card__chip--poco-stock {
+  /* --color-peligro, no --color-acento: es un aviso de stock, no una
+     promoción — terracota queda reservado para ofertas (ver index.css). */
+  background: var(--color-peligro);
+}
+
 .product-card__nombre {
   font-size: 1rem;
   margin: 0 0 6px;
   min-height: 42px;
+  font-family: var(--fuente-cuerpo);
+  font-weight: 700;
 }
 
 .product-card__precio {
   font-size: 1.2rem;
-  font-weight: 700;
+  font-weight: 800;
+  color: var(--color-marca-oscuro);
   margin: 0 0 4px;
 }
 
 .product-card__stock {
   font-size: 0.82rem;
-  color: var(--color-marca-oscuro);
+  color: var(--color-texto-suave);
   margin: 0 0 12px;
 }
 
 .product-card__stock--agotado {
   color: var(--color-peligro);
+  font-weight: 600;
+}
+
+/* Ronda 2, Etapa 8 (marketplace): "Vendido por: X" para productos de un
+   vendedor independiente — nada se muestra para el catálogo propio de
+   PetShop (producto.tienda es null). */
+.product-card__vendedor {
+  font-size: 0.75rem;
+  color: var(--color-texto-suave);
+  margin: -6px 0 8px;
 }
 
 .product-card__boton {

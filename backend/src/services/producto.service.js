@@ -5,6 +5,8 @@ import Categoria from '../models/categoria.model.js';
 import TipoMascota from '../models/tipoMascota.model.js';
 import Proveedor from '../models/proveedor.model.js';
 import ImagenProducto from '../models/imagenProducto.model.js';
+import Favorito from '../models/favorito.model.js';
+import Tienda from '../models/tienda.model.js';
 import AppError from '../errors/AppError.js';
 import {
   MAXIMO_ENTERO_POSITIVO,
@@ -14,7 +16,13 @@ import {
   prepararImporteObligatorio,
   limpiarCadenaOpcional,
 } from '../utils/validacion.js';
+import { esVendedorIndependiente } from '../utils/roles.js';
 
+// Ronda 2, Etapa 8 (marketplace): solo `idTienda`/`nombre` — NUNCA
+// `numeroDocumento`/`razonSocial` (el CUIL/CUIT del vendedor no es un dato
+// que el catálogo público deba exponer, aunque el resto de la fila
+// `tienda` no sea secreto). El catálogo muestra "Vendido por: <nombre>"
+// con esto, nada más.
 const relaciones = [
   {
     model: Categoria,
@@ -32,6 +40,15 @@ const relaciones = [
     model: ImagenProducto,
     as: 'imagen',
     required: false,
+  },
+  {
+    model: Tienda,
+    as: 'tienda',
+    required: false,
+    // `estado` se incluye para poder filtrar tiendas suspendidas (ver
+    // SOLO_TIENDAS_NO_SUSPENDIDAS/obtenerProductoPorId más abajo) — no es
+    // un dato sensible, a diferencia de numeroDocumento/razonSocial.
+    attributes: ['idTienda', 'nombre', 'estado'],
   },
 ];
 
@@ -317,30 +334,142 @@ const prepararFiltrosListado = (query) => {
   return where;
 };
 
+// Ronda 2, Etapa 8: un producto de una tienda SUSPENDIDA no debe aparecer
+// en el catálogo público — si no, "suspendida" sería un campo decorativo
+// (hallazgo real de la revisión de Codex del diseño de esta etapa). Los
+// productos de PetShop (idTienda NULL) nunca se ven afectados por esto:
+// `$tienda.estado$` solo se evalúa quando existe una fila de tienda
+// relacionada (LEFT JOIN vía `required:false` en `relaciones`).
+const SOLO_TIENDAS_NO_SUSPENDIDAS = {
+  [Op.or]: [{ idTienda: null }, { '$tienda.estado$': 'activa' }],
+};
+
 const obtenerProductos = async (filtros) => {
   return Producto.findAll({
-    where: prepararFiltrosListado(filtros),
+    where: { [Op.and]: [prepararFiltrosListado(filtros), SOLO_TIENDAS_NO_SUSPENDIDAS] },
     include: relaciones,
     order: [['nombre', 'ASC']],
+  });
+};
+
+// Buscador predictivo del encabezado (ronda 2, ver docs/frontend-diseno.md):
+// endpoint público y liviano, separado del listado general (que sigue sin
+// tocarse: lo usa el filtrado del catálogo que trabajan los compañeros).
+// Límite de longitud generoso pero acotado (evita una consulta LIKE sobre
+// una cadena arbitrariamente larga); término vacío o ausente devuelve []
+// en vez de un error 400, porque el frontend llama a esto en cada tecla —
+// incluido el momento en que el campo queda vacío al borrar todo.
+const LONGITUD_MAXIMA_BUSQUEDA = 80;
+const LIMITE_SUGERENCIAS = 6;
+
+const prepararTerminoBusqueda = (valorCrudo) => {
+  if (valorCrudo === undefined || valorCrudo === null || valorCrudo === '') {
+    return null;
+  }
+
+  if (typeof valorCrudo !== 'string') {
+    throw new AppError('El término de búsqueda no es válido', 400);
+  }
+
+  const termino = valorCrudo.trim().slice(0, LONGITUD_MAXIMA_BUSQUEDA);
+
+  return termino || null;
+};
+
+// `%` y `_` son comodines propios de LIKE (no de este endpoint): sin
+// escaparlos, buscar literalmente "50%" coincidía con cualquier nombre que
+// tuviera un "50" seguido de cualquier cosa, y buscar solo "%" o "_"
+// devolvía prácticamente cualquier producto (hallazgo real de la revisión
+// de Codex de esta etapa). MySQL usa "\" como carácter de escape de LIKE
+// por defecto, así que también hay que escapar un "\" literal primero (si
+// no, un "\" del usuario terminaría escapando el carácter que sigue).
+const escaparComodinesLike = (texto) => texto.replace(/[\\%_]/g, '\\$&');
+
+// "Alimento de prueba" (y cualquier producto de prueba equivalente) no debe
+// ofrecerse como sugerencia: mismo criterio de publicabilidad que ya usa
+// Home.jsx para "Productos destacados" (dato de desarrollo, no de catálogo
+// real de cara al cliente). Se filtra con LOWER() en ambos lados para no
+// depender de que la collation de la columna sea case-insensitive. Es una
+// regla amplia a propósito: cualquier producto real que también tuviera
+// "prueba" en el nombre quedaría oculto de las sugerencias — mismo
+// trade-off ya aceptado en Home.jsx.
+const obtenerSugerenciasBusqueda = async (query) => {
+  const termino = prepararTerminoBusqueda(query?.q);
+
+  if (!termino) {
+    return [];
+  }
+
+  const terminoNormalizado = escaparComodinesLike(termino.toLowerCase());
+
+  return Producto.findAll({
+    where: {
+      [Op.and]: [
+        // Calificado como "Producto.nombre" (no un "nombre" a secas): al
+        // sumar el JOIN con `tienda` para el filtro de suspendidas (más
+        // abajo), un "nombre" ambiguo dejó de resolver solo — `tienda`
+        // también tiene su propia columna `nombre`, y MySQL rechazaba la
+        // consulta entera con "Column 'nombre' in where clause is
+        // ambiguous" (hallazgo real al correr la prueba de integración de
+        // este mismo hallazgo de Codex).
+        sequelize.where(sequelize.fn('LOWER', sequelize.col('Producto.nombre')), {
+          [Op.like]: `%${terminoNormalizado}%`,
+        }),
+        sequelize.where(sequelize.fn('LOWER', sequelize.col('Producto.nombre')), {
+          [Op.notLike]: '%prueba%',
+        }),
+        // Hallazgo real de Codex (revisión de la implementación, Etapa 8):
+        // el buscador predictivo es TAMBIÉN una vía pública de catálogo —
+        // sin este filtro, un producto de una tienda suspendida seguía
+        // apareciendo acá aunque ya estuviera oculto del listado y del
+        // detalle.
+        SOLO_TIENDAS_NO_SUSPENDIDAS,
+      ],
+    },
+    attributes: ['idProducto', 'nombre', 'precio'],
+    include: [
+      { model: ImagenProducto, as: 'imagen', required: false, attributes: ['url'] },
+      { model: Tienda, as: 'tienda', required: false, attributes: [] },
+    ],
+    order: [['nombre', 'ASC']],
+    limit: LIMITE_SUGERENCIAS,
   });
 };
 
 // Alcance adicional voluntario: productos con stock por debajo del mínimo
 // definido. Endpoint separado (no un filtro más del listado público) porque
 // es información operativa para reponer stock, no para mostrarle al cliente.
-const obtenerProductosConStockBajo = async () => {
-  return Producto.findAll({
-    where: {
-      stockActual: {
-        [Op.lt]: sequelize.col('stockMinimo'),
-      },
+// Ronda 2, Etapa 8: un vendedor independiente ve SOLO el stock bajo de su
+// propia tienda (nunca el de PetShop ni el de otras tiendas); el personal
+// interno sigue viendo todo, sin cambios.
+const obtenerProductosConStockBajo = async (usuario) => {
+  const where = {
+    stockActual: {
+      [Op.lt]: sequelize.col('stockMinimo'),
     },
+  };
+
+  if (esVendedorIndependiente(usuario?.rol)) {
+    where.idTienda = usuario.idTienda;
+  }
+
+  return Producto.findAll({
+    where,
     include: relaciones,
     order: [['stockActual', 'ASC']],
   });
 };
 
-const obtenerProductoPorId = async (id) => {
+// `ocultarSiTiendaSuspendida` solo lo pasa en `true` el controlador de la
+// ruta PÚBLICA (ver producto.controller.js#buscarPorId): un producto de una
+// tienda suspendida no debe poder verse en el catálogo ni por link directo
+// (mismo criterio que el listado, ver SOLO_TIENDAS_NO_SUSPENDIDAS más
+// arriba). Los usos INTERNOS de esta función (releer un producto recién
+// creado/editado, favoritos, etc.) siguen sin este filtro — no tendría
+// sentido ocultarle a un vendedor independiente su propio producto recién
+// guardado solo porque, en teoría, alguien suspendió su tienda a mitad de
+// la operación.
+const obtenerProductoPorId = async (id, { ocultarSiTiendaSuspendida = false } = {}) => {
   const idProducto = validarId(id);
 
   const producto = await Producto.findByPk(idProducto, {
@@ -348,6 +477,10 @@ const obtenerProductoPorId = async (id) => {
   });
 
   if (!producto) {
+    throw new AppError('Producto no encontrado', 404);
+  }
+
+  if (ocultarSiTiendaSuspendida && producto.idTienda && producto.tienda?.estado !== 'activa') {
     throw new AppError('Producto no encontrado', 404);
   }
 
@@ -363,17 +496,84 @@ const obtenerProductoPorId = async (id) => {
 // observarse. Con todo dentro de sequelize.transaction, cualquier paso que
 // falle revierte también los que ya habían tenido éxito (ver
 // test/productoImagenAtomico.test.js).
-const crearProducto = async (datos) => {
+// Ronda 2, Etapa 8: si quien crea/edita/borra/ajusta stock es un vendedor
+// independiente, se resuelve y valida SU PROPIA tienda dentro de la MISMA
+// transacción (nunca se confía en `usuario.idTienda` del JWT sin
+// releerla: la tienda pudo suspenderse después de emitido el token, dentro
+// de sus 8h de vigencia). El personal interno (`vendedor`/`administrador`)
+// no pasa por ninguno de estos chequeos, igual que hoy.
+// Con bloqueo de fila (hallazgo real de Codex, revisión de la
+// implementación): sin esto, un vendedor podía leer 'activa', un
+// administrador suspender la tienda en el medio, y la escritura del
+// vendedor terminar igual después de la suspensión — "una tienda
+// suspendida no puede escribir" quedaba débil ante esa carrera.
+// `cambiarEstadoTienda` (tienda.service.js) toma el MISMO bloqueo antes de
+// cambiar el estado, así las dos operaciones se serializan sobre esta fila
+// en vez de competir.
+const resolverTiendaPropiaActiva = async (usuario, transaction) => {
+  const tienda = await Tienda.findByPk(usuario.idTienda, {
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+
+  if (!tienda) {
+    // No debería pasar en la práctica (el JWT solo lleva idTienda si
+    // realmente existe una Tienda para ese usuario), pero no se asume: se
+    // rechaza explícitamente en vez de continuar con un idTienda inválido.
+    throw new AppError('No se encontró la tienda asociada a esta cuenta', 403);
+  }
+
+  if (tienda.estado !== 'activa') {
+    throw new AppError('Tu tienda está suspendida: no podés modificar productos mientras tanto', 403);
+  }
+
+  return tienda;
+};
+
+// Rechaza si el producto YA EXISTENTE no pertenece a la tienda del
+// vendedor independiente que lo está editando/borrando/ajustando — nunca
+// un producto de PetShop (idTienda NULL) ni de OTRA tienda. El personal
+// interno no pasa por este chequeo (sin restricción, como siempre).
+const verificarPropietarioProducto = (producto, usuario) => {
+  if (esVendedorIndependiente(usuario?.rol) && producto.idTienda !== usuario.idTienda) {
+    throw new AppError('No tiene permisos sobre este producto', 403);
+  }
+};
+
+const crearProducto = async (datos, usuario) => {
   const datosPreparados = prepararDatosCreacion(datos);
   // Se valida antes de abrir la transacción (igual criterio que el resto
   // de las preparaciones): si la URL es inválida, ni siquiera se intenta
   // crear el producto.
   const urlImagen = prepararUrlImagen(datos?.urlImagen);
 
+  // idProveedor es un distribuidor INTERNO de PetShop (hallazgo real de
+  // Codex, revisión de la implementación): un vendedor independiente no
+  // tiene ninguno propio, y dejarlo mandar un idProveedor real mezclaría
+  // su producto marketplace con los filtros internos de "ventas por
+  // proveedor" (venta.service.js#obtenerIdsVentaPorProveedor) como si
+  // fuera mercadería de ese distribuidor. Se descarta ANTES de validar la
+  // relación (ni siquiera se consulta si ese proveedor existe).
+  if (esVendedorIndependiente(usuario?.rol)) {
+    datosPreparados.idProveedor = null;
+  }
+
   const idProducto = await sequelize.transaction(async (transaction) => {
     await comprobarRelaciones(datosPreparados, transaction);
 
-    const producto = await Producto.create(datosPreparados, { transaction });
+    // idTienda NUNCA se lee del cuerpo (mismo criterio que idCliente en
+    // checkout): un vendedor independiente crea siempre en SU tienda, sin
+    // excepción; el personal interno crea siempre para PetShop (NULL).
+    let idTienda = null;
+    if (esVendedorIndependiente(usuario?.rol)) {
+      await resolverTiendaPropiaActiva(usuario, transaction);
+      idTienda = usuario.idTienda;
+    }
+
+    const producto = await Producto.create(
+      { ...datosPreparados, idTienda },
+      { transaction },
+    );
 
     if (urlImagen) {
       await ImagenProducto.create(
@@ -388,16 +588,35 @@ const crearProducto = async (datos) => {
   return obtenerProductoPorId(idProducto);
 };
 
-const actualizarProducto = async (id, datos) => {
+const actualizarProducto = async (id, datos, usuario) => {
   const idProducto = validarId(id);
   const datosPreparados = prepararDatosActualizacion(datos);
   const urlImagen = prepararUrlImagen(datos?.urlImagen);
 
+  // Mismo motivo que en crearProducto (hallazgo real de Codex): un
+  // vendedor independiente nunca queda con un idProveedor real, ni
+  // siquiera al editar.
+  if (esVendedorIndependiente(usuario?.rol)) {
+    datosPreparados.idProveedor = null;
+  }
+
   await sequelize.transaction(async (transaction) => {
-    const producto = await Producto.findByPk(idProducto, { transaction });
+    // Con bloqueo ANTES de la tienda (Etapa 9, revisión de diseño de Codex):
+    // orden global producto → tienda, el mismo que ajustarStockProducto y
+    // que una compra (disponibilidadTienda.js). Sin este lock, el orden
+    // efectivo era tienda → producto y podía cruzarse con una compra.
+    const producto = await Producto.findByPk(idProducto, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
 
     if (!producto) {
       throw new AppError('Producto no encontrado', 404);
+    }
+
+    verificarPropietarioProducto(producto, usuario);
+    if (esVendedorIndependiente(usuario?.rol)) {
+      await resolverTiendaPropiaActiva(usuario, transaction);
     }
 
     await comprobarRelaciones(datosPreparados, transaction);
@@ -408,14 +627,23 @@ const actualizarProducto = async (id, datos) => {
   return obtenerProductoPorId(idProducto);
 };
 
-const eliminarProducto = async (id) => {
+const eliminarProducto = async (id, usuario) => {
   const idProducto = validarId(id);
 
   await sequelize.transaction(async (transaction) => {
-    const producto = await Producto.findByPk(idProducto, { transaction });
+    // Mismo orden producto → tienda que actualizarProducto (ver arriba).
+    const producto = await Producto.findByPk(idProducto, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
 
     if (!producto) {
       throw new AppError('Producto no encontrado', 404);
+    }
+
+    verificarPropietarioProducto(producto, usuario);
+    if (esVendedorIndependiente(usuario?.rol)) {
+      await resolverTiendaPropiaActiva(usuario, transaction);
     }
 
     // La FK de imagenproducto -> producto queda ON DELETE NO ACTION (mismo
@@ -427,6 +655,13 @@ const eliminarProducto = async (id) => {
     // fallar producto.destroy() y por lo tanto toda la transacción), la
     // imagen no es un dato de negocio que deba bloquear el borrado.
     await ImagenProducto.destroy({ where: { idProducto }, transaction });
+    // Mismo motivo que ImagenProducto (hallazgo real de Codex, ronda 2,
+    // Etapa 5): que un cliente haya marcado el producto como favorito no es
+    // un dato de negocio que deba bloquear su borrado (a diferencia de
+    // detalleventa, el historial real de ventas) — sin este borrado
+    // explícito, eliminar un producto con favoritos fallaría con un error
+    // de restricción de clave foránea en vez de completarse.
+    await Favorito.destroy({ where: { idProducto }, transaction });
     await producto.destroy({ transaction });
   });
 };
@@ -436,7 +671,7 @@ const eliminarProducto = async (id) => {
 // cancelarVenta) para que un movimiento manual y una venta concurrentes
 // sobre el mismo producto se serialicen en vez de perder una de las dos
 // actualizaciones.
-const ajustarStockProducto = async (id, datos) => {
+const ajustarStockProducto = async (id, datos, usuario) => {
   const idProducto = validarId(id);
   const cantidad = prepararMovimientoStock(datos);
 
@@ -448,6 +683,11 @@ const ajustarStockProducto = async (id, datos) => {
 
     if (!producto) {
       throw new AppError('Producto no encontrado', 404);
+    }
+
+    verificarPropietarioProducto(producto, usuario);
+    if (esVendedorIndependiente(usuario?.rol)) {
+      await resolverTiendaPropiaActiva(usuario, transaction);
     }
 
     const nuevoStock = producto.stockActual + cantidad;
@@ -477,7 +717,12 @@ const ajustarStockProducto = async (id, datos) => {
 };
 
 export {
+  // Exportada para que favorito.service.js pueda mostrar el producto
+  // completo (imagen incluida) al listar favoritos, con exactamente el
+  // mismo shape que el resto del catálogo — sin duplicar este arreglo.
+  relaciones,
   obtenerProductos,
+  obtenerSugerenciasBusqueda,
   obtenerProductosConStockBajo,
   obtenerProductoPorId,
   crearProducto,

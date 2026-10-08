@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import GestionEntidad from '../../components/GestionEntidad.jsx';
+import AjustarStockDialog from '../../components/AjustarStockDialog.jsx';
 import { EstadoCarga, EstadoError } from '../../components/EstadosSolicitud.jsx';
 import useCargaDatos from '../../hooks/useCargaDatos.js';
 import productosApi from '../../api/productos.api.js';
@@ -29,35 +30,57 @@ const columnas = [
 // docs/backend-api.md). Los ajustes de stock ya existente se hacen con el
 // botón "Ajustar stock" de cada fila, que llama a PATCH /:id/stock.
 const AjustarStockAccion = ({ producto, onCambio }) => {
+  const [abierto, setAbierto] = useState(false);
+  // Se incrementa en cada apertura y se usa como `key` del diálogo: fuerza
+  // una instancia de componente nueva por apertura, así el campo de
+  // cantidad siempre arranca vacío sin necesitar ningún reseteo manual (ver
+  // el comentario en AjustarStockDialog.jsx).
+  const [aperturas, setAperturas] = useState(0);
   const [enCurso, setEnCurso] = useState(false);
+  const [error, setError] = useState(null);
 
-  const ajustar = async () => {
-    const texto = window.prompt(
-      `Movimiento de stock para "${producto.nombre}" (stock actual: ${producto.stockActual}).\nUn número positivo suma, uno negativo resta:`,
-    );
-    if (texto === null || texto.trim() === '') return;
+  const abrir = () => {
+    setError(null);
+    setAperturas((valor) => valor + 1);
+    setAbierto(true);
+  };
 
-    const cantidad = Number(texto);
-    if (!Number.isInteger(cantidad) || cantidad === 0) {
-      window.alert('Ingresá un número entero distinto de cero.');
-      return;
-    }
+  const cerrar = () => {
+    if (enCurso) return;
+    setAbierto(false);
+    setError(null);
+  };
 
+  const confirmar = async (cantidad) => {
     setEnCurso(true);
+    setError(null);
     try {
       await productosApi.ajustarStock(producto.idProducto, cantidad);
+      setAbierto(false);
       onCambio();
-    } catch (error) {
-      window.alert(error.message);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setEnCurso(false);
     }
   };
 
   return (
-    <button type="button" className="boton-enlace" onClick={ajustar} disabled={enCurso}>
-      Ajustar stock
-    </button>
+    <>
+      <button type="button" className="boton-enlace" onClick={abrir}>
+        Ajustar stock
+      </button>
+      {abierto && (
+        <AjustarStockDialog
+          key={aperturas}
+          producto={producto}
+          cargando={enCurso}
+          error={error}
+          onConfirmar={confirmar}
+          onCancelar={cerrar}
+        />
+      )}
+    </>
   );
 };
 

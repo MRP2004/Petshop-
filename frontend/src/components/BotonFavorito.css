@@ -1,0 +1,35 @@
+.boton-favorito {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-borde-interactivo);
+  border-radius: 999px;
+  background: var(--color-superficie);
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+
+.boton-favorito:hover:not(:disabled) {
+  transform: scale(1.08);
+}
+
+.boton-favorito:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.boton-favorito--activo {
+  background: var(--color-acento-suave);
+}
+
+.boton-favorito--normal {
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1.1rem;
+}
+
+.boton-favorito--grande {
+  width: 2.75rem;
+  height: 2.75rem;
+  font-size: 1.4rem;
+}

@@ -140,20 +140,23 @@ refleja en las respuestas que incluyen la venta completa como
 
 ## Promociones (`PromocionProducto`)
 
-CRUD completo en `/api/promociones` (lectura pública, escritura
-`vendedor`/`administrador`), reutilizando la tabla `promocionproducto` que
-ya existía en la base de desarrollo. Campos: `idProducto` (obligatorio),
-`idCategoria` (opcional), `fechaInicio`/`fechaFin` (`AAAA-MM-DD`),
-`descuento` (número, rango de `DECIMAL(5,2)`).
+`GET /api/promociones` y `GET /api/promociones/:id` son públicos y devuelven
+solo promociones vigentes en la fecha local de Argentina, con inicio y fin
+incluidos. `GET /api/promociones/gestion` requiere personal interno y devuelve
+todas las promociones para su administración. Crear/editar/eliminar requiere
+`vendedor` o `administrador`.
 
-**Importante**: esta etapa solo administra el catálogo de promociones. Las
-reglas de aplicación (si el descuento es porcentual o fijo, cómo se combina
-con el descuento manual de una venta, comportamiento ante promociones
-superpuestas) todavía no están confirmadas por Mauro, así que **ninguna
-promoción se aplica automáticamente** al registrar una venta — ver
-[estado-proyecto.md](estado-proyecto.md). El frontend público
-(`/promociones`) muestra un aviso explícito de esto, para no anunciarle al
-comprador un descuento que en realidad no se aplica al pagar.
+Una promoción requiere `idProducto`, `fechaInicio`/`fechaFin` (`AAAA-MM-DD`)
+y `descuento` porcentual de 1 a 100. Solo se aplica a ese producto; no tiene
+campo `idCategoria`. No se permiten períodos superpuestos para el mismo
+producto.
+
+El checkout y `POST /api/ventas` (venta manual del personal) usan el mismo
+cálculo de precios. Primero se aplica el porcentaje promocional a cada
+producto; en una venta manual, después se resta el importe del descuento
+manual. `POST /api/ventas/cotizacion` permite al panel mostrar el subtotal
+promocionado antes de registrar la venta. El backend vuelve a cotizar dentro
+de la transacción que registra la venta.
 
 `fechaInicio`/`fechaFin` se validan contra el calendario real, no solo el
 formato: `"2026-02-30"` (30 de febrero, no existe) responde
@@ -161,6 +164,9 @@ formato: `"2026-02-30"` (30 de febrero, no existe) responde
 en vez de aceptarse y normalizarse en silencio a otro día (que es lo que
 hace `new Date()` de JavaScript con una fecha así, si no se valida
 explícitamente).
+
+El detalle de redondeo, historial, bloqueo ante solicitudes concurrentes y
+migración está en [promociones.md](promociones.md).
 
 ## Política de campos de texto opcionales (cliente, proveedor, producto, etc.)
 

@@ -23,11 +23,23 @@ const Venta = sequelize.define(
       allowNull: false,
     },
 
+    // Ronda 2, Etapa 7 (estados de pedido): 2 valores nuevos, aditivos —
+    // ver backend/scripts/migracionRonda2Etapa7.js. `'enviada'` queda como
+    // el estado legado/operativo de "despachada" para ventas con
+    // `metodoEntrega='envío a domicilio'` (o método legado desconocido, ver
+    // venta.service.js#marcarVentaComoEnviada); `'lista_para_retirar'` es
+    // su equivalente para retiro en sucursal. `'entregada'` es el único
+    // estado final real (retirado o entregado a domicilio, confirmado por
+    // el personal) — se llega a él desde CUALQUIERA de los dos anteriores,
+    // nunca directo desde 'registrada' (revisión de diseño, Codex: "evita
+    // saltear el hito operativo intermedio").
     estado: {
       type: DataTypes.ENUM(
         'registrada',
         'cancelada',
         'enviada',
+        'lista_para_retirar',
+        'entregada',
       ),
       allowNull: false,
       defaultValue: 'registrada',

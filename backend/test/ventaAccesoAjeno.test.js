@@ -8,7 +8,6 @@ import assert from 'node:assert/strict';
 import request from 'supertest';
 
 import app from '../src/app.js';
-import sequelize from '../src/config/database.js';
 import Venta from '../src/models/venta.model.js';
 import { tokenCliente, tokenVendedor, autorizacion } from './ayudaAutenticacion.js';
 
@@ -25,25 +24,15 @@ const ventaAjena = {
 };
 
 before(() => {
-  originales.sequelizeTransaction = sequelize.transaction;
   originales.ventaFindByPk = Venta.findByPk;
-
   Venta.findByPk = async (id) => (Number(id) === ventaAjena.idVenta ? { ...ventaAjena } : null);
-
-  // Transacción falsa (igual que ventaDescuentoAutorizacion.test.js): solo
-  // ejecuta el callback con un objeto que expone LOCK.UPDATE. La
-  // comprobación de pertenencia de cancelarVenta ocurre DENTRO de esa
-  // transacción (lee la venta y compara el dueño antes de tocar nada más),
-  // así que hace falta que el callback corra de verdad para poder probarla;
-  // si la pertenencia fallara en detectarse, el siguiente paso real sería
-  // DetalleVenta.findAll, que no está simulado y fallaría fuerte (no hay
-  // forma de que la prueba pase "de casualidad" sin que la comprobación de
-  // permisos haya actuado primero).
-  sequelize.transaction = async (callback) => callback({ LOCK: { UPDATE: 'UPDATE' } });
+  // Ya no hace falta simular sequelize.transaction acá (corrección: la
+  // cancelación directa ahora se rechaza en el middleware `requiereRol`,
+  // antes de que la solicitud llegue a abrir ninguna transacción — ver los
+  // dos tests de PATCH /:id/cancelar más abajo).
 });
 
 after(() => {
-  sequelize.transaction = originales.sequelizeTransaction;
   Venta.findByPk = originales.ventaFindByPk;
 });
 
@@ -74,13 +63,26 @@ test('GET /api/ventas/:id: personal puede ver la venta de cualquier cliente', as
   assert.equal(respuesta.body.idVenta, 1);
 });
 
-test('PATCH /api/ventas/:id/cancelar: un cliente distinto del dueño no puede cancelarla (403, antes de tocar stock o estado)', async () => {
+// Corrección (revisión de Mauro sobre la venta #20): el cliente ya NO puede
+// cancelar directamente, ni siquiera su PROPIA venta — la ruta exige
+// vendedor/administrador (ver venta.routes.js), así que esto se rechaza en
+// el middleware `requiereRol`, antes de llegar al controller/servicio.
+test('PATCH /api/ventas/:id/cancelar: ningún cliente puede cancelar directamente, ni siquiera su propia venta (403 en la ruta, antes del servicio)', async () => {
+  const respuesta = await request(app)
+    .patch('/api/ventas/1/cancelar')
+    .set('Authorization', autorizacion(tokenCliente(7))) // 7 es el dueño real de la venta #1
+    .expect(403);
+
+  assert.equal(respuesta.body.error, 'No tiene permisos para realizar esta acción');
+});
+
+test('PATCH /api/ventas/:id/cancelar: un cliente distinto del dueño tampoco puede (403)', async () => {
   const respuesta = await request(app)
     .patch('/api/ventas/1/cancelar')
     .set('Authorization', autorizacion(tokenCliente(99)))
     .expect(403);
 
-  assert.equal(respuesta.body.error, 'No tiene permisos para cancelar esta venta');
+  assert.equal(respuesta.body.error, 'No tiene permisos para realizar esta acción');
 });
 
 test('GET /api/ventas/999 (inexistente): 404 igual para cualquier rol, no filtra si existe o no es ajena', async () => {

@@ -5,6 +5,7 @@ import { useCarrito } from '../hooks/useCarrito.js';
 import useCargaDatos from '../hooks/useCargaDatos.js';
 import productosApi from '../api/productos.api.js';
 import ImagenProducto from '../components/ImagenProducto.jsx';
+import BotonFavorito from '../components/BotonFavorito.jsx';
 import './ProductoDetalle.css';
 
 const formateador = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' });
@@ -48,7 +49,13 @@ const ProductoDetalleContenido = ({ id }) => {
       />
 
       <div className="producto-detalle__info">
-        <h1>{producto.nombre}</h1>
+        <div className="producto-detalle__titulo">
+          <h1>{producto.nombre}</h1>
+          <BotonFavorito producto={producto} tamano="grande" />
+        </div>
+        {producto.tienda && (
+          <p className="producto-detalle__vendedor">Vendido por: {producto.tienda.nombre}</p>
+        )}
         {producto.descripcion && <p className="producto-detalle__descripcion">{producto.descripcion}</p>}
 
         <p className="producto-detalle__precio">{formateador.format(Number(producto.precio))}</p>

@@ -29,6 +29,11 @@ import '../src/models/detalleVenta.model.js';
 import '../src/models/promocionProducto.model.js';
 import '../src/models/direccionEntrega.model.js';
 import '../src/models/imagenProducto.model.js';
+import '../src/models/intentoCompra.model.js';
+import '../src/models/pago.model.js';
+import '../src/models/comprobante.model.js';
+import '../src/models/detalleVentaPromocion.model.js';
+import '../src/models/solicitudCancelacion.model.js';
 import { hashearContrasena } from '../src/utils/contrasenas.js';
 import { registrarVenta } from '../src/services/venta.service.js';
 
@@ -112,14 +117,34 @@ const asegurarBaseEfectivaDeE2E = async () => {
 // script tiene con la base E2E, y debe poder borrarse/copiarse sin arrastrar
 // nada de test-integracion/ (que tiene su propia habilitación, para
 // petshop_test, no para esto).
+//
+// Corrección real (encontrada al re-sembrar tras la Etapa 8): esta lista
+// se había quedado desactualizada desde las Etapas 4/5/6 — nunca sumó
+// `direccioncliente`/`favorito`/`aviso`, así que sus filas quedaban
+// huérfanas (apuntando a un cliente/usuario/producto ya borrado y
+// recreado con otro id) después de cada re-siembra. Ahora incluye las 5
+// tablas que se agregaron desde entonces, en el mismo orden que
+// ayudaIntegracion.js — `producto` se corrió ANTES que `usuario` (antes
+// iba después) porque `producto.idTienda` referencia a `tienda`, que a su
+// vez referencia a `usuario`.
 const limpiarTodo = async () => {
+  await sequelize.query('DELETE FROM aviso');
+  await sequelize.query('DELETE FROM favorito');
+  await sequelize.query('DELETE FROM direccioncliente');
   await sequelize.query('DELETE FROM direccionentrega');
+  await sequelize.query('DELETE FROM solicitudcancelacion');
+  await sequelize.query('DELETE FROM pago');
+  await sequelize.query('DELETE FROM comprobante');
+  await sequelize.query('DELETE FROM detalleventapromocion');
+  await sequelize.query('DELETE FROM intentocompra');
   await sequelize.query('DELETE FROM detalleventa');
   await sequelize.query('DELETE FROM promocionproducto');
-  await sequelize.query('DELETE FROM usuario');
-  await sequelize.query('DELETE FROM venta');
   await sequelize.query('DELETE FROM imagenproducto');
   await sequelize.query('DELETE FROM producto');
+  await sequelize.query('DELETE FROM tienda');
+  await sequelize.query('DELETE FROM solicitudvendedor');
+  await sequelize.query('DELETE FROM usuario');
+  await sequelize.query('DELETE FROM venta');
   await sequelize.query('DELETE FROM categoria');
   await sequelize.query('DELETE FROM tipomascota');
   await sequelize.query('DELETE FROM proveedor');
@@ -150,8 +175,21 @@ const sembrar = async () => {
     telefono: '3410000000',
   });
 
+  // Los dos últimos son los que usa el checkout de pago simulado (CU-04):
+  // ver compra.service.js#obtenerIdMedioPagoSimulado, que los busca por
+  // este nombre exacto.
   const [efectivo] = await Promise.all([
     MedioPago.create({ nombre: 'Efectivo', descripcion: 'Pago en efectivo', habilitado: true }),
+    MedioPago.create({
+      nombre: 'Transferencia bancaria (simulada)',
+      descripcion: 'Simulación de transferencia — checkout de cliente, sin movimiento real de dinero',
+      habilitado: true,
+    }),
+    MedioPago.create({
+      nombre: 'Débito (simulado)',
+      descripcion: 'Simulación de pago con débito — checkout de cliente, sin pasarela real',
+      habilitado: true,
+    }),
   ]);
 
   // Stock alto a propósito: varias corridas de Playwright en la misma

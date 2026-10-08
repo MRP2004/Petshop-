@@ -39,3 +39,65 @@
   font-size: 0.8rem;
   color: var(--color-peligro);
 }
+
+.checkout__ayuda-campo--info {
+  color: var(--color-texto-suave);
+}
+
+.checkout__aviso {
+  background: rgba(34, 139, 230, 0.1);
+  border: 1px solid var(--color-acento);
+  border-radius: var(--radio-borde);
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  margin: 0 0 10px;
+}
+
+.checkout__descuento {
+  color: var(--color-marca-oscuro);
+}
+
+.checkout__pago {
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-borde);
+  padding: 14px;
+  margin: 16px 0;
+}
+
+.checkout__pago legend {
+  font-size: 0.85rem;
+  color: var(--color-texto-suave);
+  padding: 0 4px;
+}
+
+.checkout__opcion-pago {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-weight: 400;
+}
+
+.checkout__datos-debito {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-borde);
+}
+
+.campo--linea {
+  /* flex-direction: row explícito (no solo display:flex): `.campo`
+     (index.css) ya pone flex-direction:column, y sin una declaración de
+     flex-direction PROPIA acá, esa columna seguía ganando la cascada (la
+     propiedad se resuelve regla por regla, no todo-o-nada por selector) —
+     esta fila nunca se veía en fila de verdad, ni acá ni en
+     DireccionForm.jsx, que reutiliza la misma clase (hallazgo real,
+     encontrado al revisar visualmente el formulario de dirección de la
+     ronda 2). */
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+}
+
+.campo--linea > div {
+  flex: 1;
+}

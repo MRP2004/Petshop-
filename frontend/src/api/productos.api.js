@@ -18,9 +18,14 @@ const listarStockBajo = () => solicitar('/productos/stock-bajo');
 const ajustarStock = (id, cantidad) =>
   solicitar(`/productos/${id}/stock`, { metodo: 'PATCH', cuerpo: { cantidad } });
 
+// Buscador predictivo del encabezado (ronda 2): endpoint público y liviano,
+// separado del listado general (ver producto.routes.js).
+const sugerencias = (termino) => solicitar(`/productos/sugerencias?q=${encodeURIComponent(termino)}`);
+
 export default {
   ...base,
   listarFiltrado,
   listarStockBajo,
   ajustarStock,
+  sugerencias,
 };

@@ -68,6 +68,23 @@ cd backend
 DOTENV_CONFIG_PATH=.env.test npm run test:integracion
 ```
 
+Archivos agregados en la Etapa 9 de la ronda 2:
+
+- `marketplaceCompra.integracion.js` (8 pruebas): compra mixta con un
+  producto de PetShop y dos tiendas (total, stock, un aviso por tienda,
+  "Mis ventas" de cada vendedor), reintento idempotente sin avisos nuevos,
+  tienda suspendida al cotizar, confirmar y en la venta manual, y cuatro
+  pruebas de concurrencia con bloqueos reales retenidos por una conexión
+  cruda (suspensión contra compra en los dos órdenes, orden producto →
+  tienda con una sonda `FOR UPDATE NOWAIT`, suspensión contra edición).
+- `permisosCruzados.integracion.js` (11 pruebas): permisos por HTTP con el
+  **login real** de cada rol (cookie de sesión + `X-CSRF-Token`): cliente,
+  vendedor interno, administrador, vendedores independientes de dos
+  tiendas distintas y sin sesión.
+
+`test/utilMigracion.test.js` (unitaria) cubre el chequeo de "el ENUM solo
+se amplía" que usan las migraciones.
+
 Comando (PowerShell):
 
 ```powershell
@@ -145,18 +162,28 @@ párrafo; acá se listan una por una.
 
 | Suite | ¿Corrió en esta etapa? | Resultado real | Contra qué base |
 |---|---|---|---|
-| Backend sin base (`npm test`) | Sí | **175 pruebas, 175 aprobadas, 0 falladas** | Ninguna (mockeada/interceptada) |
-| Backend integración (`npm run test:integracion`) | Sí (cuarta corrección) | **30 pruebas, 30 aprobadas, 0 falladas**, real contra MySQL — ver [estado-proyecto.md](estado-proyecto.md) | `petshop_test` |
+| Backend sin base (`npm test`) | Sí | **236 pruebas, 236 aprobadas, 0 falladas** | Ninguna (mockeada/interceptada) |
+| Backend integración (`npm run test:integracion`) | Sí (novena corrección, CU-04 ronda 4) | **74 pruebas, 74 aprobadas, 0 falladas**, real contra MySQL — ver [estado-proyecto.md](estado-proyecto.md) | `petshop_test` |
 | Frontend unitarias/componentes (`npm test` en `frontend/`) | Sí | Ver [frontend-pruebas.md](../docs/frontend-pruebas.md) | Ninguna |
-| Frontend E2E (`npx playwright test`) | Sí (cuarta corrección) | **18 casos, 18 aprobados**, real contra el backend/frontend aislados — corrido dos veces seguidas sin reiniciar el backend para confirmar reproducibilidad, ver [estado-proyecto.md](estado-proyecto.md) | `petshop_e2e`, nunca `petshop_db` |
+| Frontend E2E (`npx playwright test`) | Sí (novena corrección, CU-04 ronda 4) | **36 casos, 36 aprobados** (12 casos × 3 viewports), real contra el backend/frontend aislados, incluyendo la solicitud de cancelación del cliente y la cancelación directa del personal con confirmación — ver [estado-proyecto.md](estado-proyecto.md) | `petshop_e2e`, nunca `petshop_db` |
 
-**Backend, sin base**: ejecutada de verdad en esta corrección, con el
-comando exacto de arriba, 175/175. Incluye las pruebas de correcciones
-anteriores (regresión del descuento, acceso a ventas ajenas, sesión/CSRF,
-calendario de promociones) y las de esta corrección
-(`productoImagen.test.js`, la reescritura de
-`limiteIntentosPorIp.test.js` con `Map` independiente por instancia, y
-`productoImagenAtomico.test.js`).
+**Backend, sin base**: ejecutada de verdad en la novena corrección (CU-04,
+ronda 4), con el comando exacto de arriba, 236/236. Sobre las 227 de la
+octava corrección, suma 6 nuevas en `correo.service.test.js` (adjunto con
+firma `%PDF`, fallo de generación de PDF, con/sin/mal-configurada
+`URL_PUBLICA_FRONTEND`) + 3 nuevas en `ventaCancelacionPermisos.test.js`
+(corrección adicional post-entrega: `cancelarVenta` ahora exige
+explícitamente `vendedor`/`administrador`, rechazando también un rol
+desconocido o la ausencia de usuario, no solo `'cliente'` — ver
+`cu04-informe-cierre.md` §12.10).
+
+**Backend, integración**: sobre las 61 de la octava corrección, suma 13
+nuevas — 12 en `test-integracion/solicitudCancelacion.integracion.js`
+(nuevo: solicitar, aprobar, rechazar, duplicados, decisiones repetidas,
+cierre automático de una solicitud pendiente al cancelar/enviar
+directamente, y dos escenarios de concurrencia real) + 1 en
+`compra.integracion.js` ("el propio cliente NO puede cancelar
+directamente").
 
 **Backend, integración**: sigue exactamente en el mismo estado que en la
 entrega anterior (bloqueo de privilegios de MySQL, ver

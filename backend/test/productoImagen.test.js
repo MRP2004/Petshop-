@@ -61,7 +61,8 @@ before(() => {
   // callback con un objeto de transacción falso — no simula rollback,
   // porque estas pruebas son todas de camino feliz; el rollback ante fallas
   // se prueba en productoImagenAtomico.test.js.
-  sequelize.transaction = async (callback) => callback({});
+  // Con LOCK, como una transacción real: editar/borrar bloquean el producto.
+  sequelize.transaction = async (callback) => callback({ LOCK: { UPDATE: 'UPDATE', SHARE: 'SHARE' } });
 
   Producto.create = async (datos) => {
     productoCreado = { idProducto: 9, ...datos };

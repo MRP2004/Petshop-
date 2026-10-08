@@ -1,6 +1,7 @@
 import {
   obtenerPromociones,
-  obtenerPromocionPorId,
+  obtenerTodasLasPromociones,
+  obtenerPromocionPublicaPorId,
   crearPromocion,
   actualizarPromocion,
   eliminarPromocion,
@@ -15,9 +16,18 @@ const listar = async (req, res, next) => {
   }
 };
 
+const listarGestion = async (req, res, next) => {
+  try {
+    const promociones = await obtenerTodasLasPromociones();
+    res.status(200).json(promociones);
+  } catch (error) {
+    next(error);
+  }
+};
+
 const buscarPorId = async (req, res, next) => {
   try {
-    const promocion = await obtenerPromocionPorId(req.params.id);
+    const promocion = await obtenerPromocionPublicaPorId(req.params.id);
     res.status(200).json(promocion);
   } catch (error) {
     next(error);
@@ -51,4 +61,4 @@ const eliminar = async (req, res, next) => {
   }
 };
 
-export { listar, buscarPorId, crear, actualizar, eliminar };
+export { listar, listarGestion, buscarPorId, crear, actualizar, eliminar };

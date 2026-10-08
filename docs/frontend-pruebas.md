@@ -163,7 +163,7 @@ pantalla), cada uno corrido en los 3 viewports (`sm-mobile`/`md-tablet`/
 | # | Caso cubierto | Archivo |
 |---|---|---|
 | 1 | Sin sesión, entrar a `/panel` redirige a iniciar sesión | `e2e/recorrido-completo.spec.js` |
-| 2 | Iniciar sesión (cliente), buscar un producto, agregar al carrito, confirmar la compra, ver el número de operación, cancelarla y verla reflejada en "Mis compras" | ídem |
+| 2 | Iniciar sesión (cliente), buscar un producto, agregar al carrito, confirmar la compra, ver el número de operación, solicitar la cancelación y ver que el personal la apruebe (corregido en CU-04, ronda 4 — el cliente ya no cancela directamente, ver [cu04-checkout-pago.md](cu04-checkout-pago.md) §7) | ídem |
 | 3 | Credenciales incorrectas muestran un mensaje de error claro, sin redirigir | ídem |
 | 4 | Un cliente autenticado no puede entrar al panel de personal (redirige a "/") | ídem |
 | 5 | Un vendedor carga una venta manual para un cliente existente y la marca como enviada | ídem |
@@ -276,10 +276,42 @@ mismas cuentas `@petshop-e2e.test`) — no contra desarrollo.
 npx playwright test capturas.spec.js
 ```
 
+### Recorrido del vendedor independiente (Etapa 9)
+
+`e2e/vendedor-independiente.spec.js` recorre, en cada viewport:
+
+1. Registro de una cuenta aspirante por la API pública, con email único
+   por corrida y por viewport.
+2. "Quiero ser vendedor" por la interfaz.
+3. Aprobación del administrador.
+4. Nueva sesión, ya como vendedor, y alta de un producto propio.
+5. Compra de ese producto por el cliente sembrado, que lo encuentra con el
+   buscador y ve "Vendido por".
+6. Aviso en la campana del vendedor, que lleva a "Mis ventas" con su línea
+   y su subtotal.
+
+También prueba el acceso por URL directa a rutas de otro rol, que termina
+redirigido a `/`.
+
+**Nunca cambia el rol de las cuentas sembradas.** En la Etapa 8, una
+verificación manual convirtió al cliente sembrado en vendedor y rompió
+otras pruebas. Por eso esta prueba registra su propia cuenta en cada
+corrida. Para no chocar con el límite de registros por IP (15 por hora),
+`backend/.env.e2e` define `LIMITE_REGISTRO_POR_IP=500`. En cualquier otro
+entorno el límite sigue en 15.
+
+Además guarda capturas de las pantallas del marketplace (`11-` a `14-`)
+en la misma carpeta `e2e/capturas-salida/<proyecto>/`. Estas capturas
+**no** son de solo lectura: se toman durante el recorrido, que escribe en
+`petshop_e2e`.
+
 ## Lo que falta (fuera de alcance por ahora)
 
-- Pruebas unitarias de los formularios más complejos (`GestionEntidad`,
-  `Checkout`, `PanelNuevaVenta`).
+- Pruebas unitarias de `PanelNuevaVenta` (`GestionEntidad` y `Checkout`
+  ya tienen las suyas).
+- E2E de la compra mixta (PetShop + varias tiendas) y de la suspensión de
+  una tienda desde el panel: hoy solo están cubiertas por integración y
+  HTTP (ver [matriz-trazabilidad.md](matriz-trazabilidad.md)).
 - Corrida automática de estas suites en CI (el workflow actual,
   `.github/workflows/backend-tests.yml`, solo corre las pruebas del
   backend).
