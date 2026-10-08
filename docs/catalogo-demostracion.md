@@ -33,3 +33,11 @@ Credenciales exclusivas de esta base: `cliente-catalogo@petshop.demo / Demo1234C
 ## Verificación antes de integrar
 
 Ejecutar `npm test` e integración en `petshop_test`, frontend `npm test`, `npm run lint`, `npm run build` y E2E con `petshop_e2e`. Probar el endpoint con 1000 registros y validar que nunca devuelve más de 24, que `total` coincide con MySQL, que el subtipo equivocado devuelve 400, que una tienda suspendida no aparece y que cambiar filtros vuelve a la primera página. El filtrado de promociones vigentes sigue siendo responsabilidad del endpoint de promociones; este catálogo no anuncia descuentos no calculados.
+
+## Catálogo de desarrollo sin artículos ficticios
+
+Las clases de mascotas se pueden cargar en `petshop_db` sin crear productos: desde `backend`, ejecutar `node scripts/sembrarClasesMascotas.js` (modo informativo) y luego `node scripts/sembrarClasesMascotas.js --confirmar`. El script agrega únicamente tipos, subtipos y relaciones faltantes; repetirlo no duplica datos. Requiere la conexión local `petshop_app@localhost` y el esquema actualizado.
+
+Si se habían cargado los 1000 artículos ficticios en `petshop_db`, primero hacer un respaldo completo y ejecutar `node scripts/retirarCatalogoFicticio.js` para comprobar que hay exactamente 1000 series y ninguna venta o promoción vinculada. Solo entonces ejecutar `node scripts/retirarCatalogoFicticio.js --confirmar`. Borra imágenes, facetas, favoritos y los artículos ficticios en una sola transacción. Conserva `tipomascota`, `jerarquiamascota`, categorías, productos reales y sus ventas. Las categorías se conservan porque el sembrador reutilizaba también las existentes y no se puede inferir cuáles eran nuevas solo por el nombre. Si una comprobación falla, no modificar la base y revisar la salida.
+
+El sembrador masivo del repositorio sigue limitado a `petshop_catalogo_demo`; ejecutarlo en esa base aislada no modifica `petshop_db`.
