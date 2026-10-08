@@ -10,7 +10,7 @@ import path from 'node:path';
 // escribe, usa las cuentas que siembra `npm run sembrar:e2e`, no las de
 // desarrollo — así nunca hace falta decidir caso por caso si esta suite en
 // particular es segura de correr contra petshop_db.
-const DIR = path.resolve('e2e/capturas-salida');
+const DIR = path.resolve(process.env.E2E_CAPTURAS_DIR || 'e2e/capturas-salida');
 
 const CLIENTE = { email: 'cliente@petshop-e2e.test', password: 'E2EDemo1234Client' };
 const VENDEDOR = { email: 'vendedor@petshop-e2e.test', password: 'E2EDemo1234Vende' };
@@ -18,6 +18,9 @@ const VENDEDOR = { email: 'vendedor@petshop-e2e.test', password: 'E2EDemo1234Ven
 test.describe.configure({ mode: 'serial' });
 
 test('capturas de solo lectura (no confirman ninguna compra)', async ({ page }, testInfo) => {
+  // Las capturas de página completa pueden superar el límite global de 30 s
+  // en una corrida lenta. Acotar la ampliación solo a este recorrido.
+  test.setTimeout(90_000);
   // Cada proyecto (sm-mobile/md-tablet/lg-desktop, ver playwright.config.js)
   // corre este mismo test una vez por viewport: sin el nombre del proyecto
   // en la carpeta, las tres corridas escribirían el mismo archivo encima y
@@ -38,7 +41,9 @@ test('capturas de solo lectura (no confirman ninguna compra)', async ({ page }, 
   await capturar('03-detalle-producto.png');
 
   await page.goto('/promociones');
-  await page.waitForSelector('.promociones__aviso');
+  await page.locator('.promociones__lista').or(
+    page.getByText('No hay promociones cargadas por el momento.', { exact: true }),
+  ).waitFor({ state: 'visible' });
   await capturar('04-promociones.png');
 
   // Agregar al carrito es solo estado local (React + localStorage): no

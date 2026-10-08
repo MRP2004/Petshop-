@@ -1,5 +1,7 @@
 import {
   obtenerProductos,
+  obtenerCatalogo,
+  obtenerMarcasCatalogo,
   obtenerSugerenciasBusqueda,
   obtenerProductosConStockBajo,
   obtenerProductoPorId,
@@ -13,6 +15,22 @@ const listar = async (req, res, next) => {
   try {
     const productos = await obtenerProductos(req.query);
     res.status(200).json(productos);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const listarCatalogo = async (req, res, next) => {
+  try {
+    res.status(200).json(await obtenerCatalogo(req.query));
+  } catch (error) {
+    next(error);
+  }
+};
+
+const listarMarcas = async (_req, res, next) => {
+  try {
+    res.status(200).json(await obtenerMarcasCatalogo());
   } catch (error) {
     next(error);
   }
@@ -96,6 +114,8 @@ const ajustarStock = async (req, res, next) => {
 
 export {
   listar,
+  listarCatalogo,
+  listarMarcas,
   sugerencias,
   listarStockBajo,
   buscarPorId,

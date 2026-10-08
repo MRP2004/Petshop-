@@ -7,7 +7,10 @@ import Proveedor from '../models/proveedor.model.js';
 import ImagenProducto from '../models/imagenProducto.model.js';
 import Favorito from '../models/favorito.model.js';
 import Tienda from '../models/tienda.model.js';
+import JerarquiaMascota from '../models/jerarquiaMascota.model.js';
+import FacetaProducto from '../models/facetaProducto.model.js';
 import AppError from '../errors/AppError.js';
+import { prepararFiltrosCatalogo } from '../utils/filtrosCatalogo.js';
 import {
   MAXIMO_ENTERO_POSITIVO,
   esObjetoPlano,
@@ -82,9 +85,12 @@ const prepararUrlImagen = (valorCrudo) => {
     );
   }
 
-  if (!/^https?:\/\/.+/i.test(url)) {
+  // Imágenes locales del catálogo de demostración: misma ruta en cualquier
+  // host de Vite, incluido un puerto compartido. No se aceptan rutas
+  // arbitrarias ni esquemas como javascript:.
+  if (!/^https?:\/\/.+/i.test(url) && !/^\/demo-productos\/[a-z0-9-]+\.svg$/.test(url)) {
     throw new AppError(
-      'La URL de la imagen debe empezar con http:// o https://',
+      'La URL de la imagen debe usar http(s) o una imagen local de demostración',
       400,
     );
   }
@@ -350,6 +356,109 @@ const obtenerProductos = async (filtros) => {
     include: relaciones,
     order: [['nombre', 'ASC']],
   });
+};
+
+// Endpoint paginado para el catálogo público. El listado histórico conserva
+// su contrato de arreglo para los paneles y recorridos existentes.
+const obtenerCatalogo = async (query) => {
+  const filtros = prepararFiltrosCatalogo(query);
+  const where = {};
+  if (filtros.idCategoria !== null) where.idCategoria = filtros.idCategoria;
+
+  if (filtros.idTipoMascota !== null) {
+    const hijos = await JerarquiaMascota.findAll({
+      where: { idTipoPadre: filtros.idTipoMascota },
+      attributes: ['idTipoHijo'],
+    });
+    const ids = hijos.map((fila) => fila.idTipoHijo);
+    if (filtros.idSubtipoMascota !== null) {
+      if (!ids.includes(filtros.idSubtipoMascota)) {
+        throw new AppError('El subtipo no pertenece al tipo de mascota elegido', 400);
+      }
+      where.idTipoMascota = filtros.idSubtipoMascota;
+    } else {
+      where.idTipoMascota = { [Op.in]: [filtros.idTipoMascota, ...ids] };
+    }
+  } else if (filtros.idSubtipoMascota !== null) {
+    throw new AppError('Elegí primero un tipo de mascota', 400);
+  }
+
+  if (filtros.precioMin !== null || filtros.precioMax !== null) {
+    where.precio = {};
+    if (filtros.precioMin !== null) where.precio[Op.gte] = (filtros.precioMin / 100).toFixed(2);
+    if (filtros.precioMax !== null) where.precio[Op.lte] = (filtros.precioMax / 100).toFixed(2);
+  }
+  if (filtros.disponibles) where.stockActual = { [Op.gt]: 0 };
+
+  // findAndCountAll omite los LEFT JOIN no obligatorios al contar. Resolver
+  // la visibilidad por IDs evita referenciar el alias tienda en COUNT y
+  // mantiene la suspensión efectiva también en páginas posteriores.
+  const tiendasActivas = await Tienda.findAll({
+    where: { estado: 'activa' }, attributes: ['idTienda'], raw: true,
+  });
+  const condiciones = [where, {
+    [Op.or]: [
+      { idTienda: null },
+      { idTienda: { [Op.in]: tiendasActivas.map((tienda) => tienda.idTienda) } },
+    ],
+  }];
+  if (filtros.buscar) {
+    condiciones.push(sequelize.where(
+      sequelize.fn('LOWER', sequelize.col('Producto.nombre')),
+      { [Op.like]: `%${escaparComodinesLike(filtros.buscar.toLowerCase())}%` },
+    ));
+  }
+  const filtrarFacetas = Object.keys(filtros.facetas).length > 0;
+  const ordenes = {
+    nombre: [['nombre', 'ASC'], ['idProducto', 'ASC']],
+    'precio-asc': [['precio', 'ASC'], ['idProducto', 'ASC']],
+    'precio-desc': [['precio', 'DESC'], ['idProducto', 'ASC']],
+    nuevos: [['idProducto', 'DESC']],
+  };
+  const { rows, count } = await Producto.findAndCountAll({
+    where: { [Op.and]: condiciones },
+    include: [
+      ...relaciones,
+      ...(filtrarFacetas
+        ? [{ model: FacetaProducto, as: 'facetas', required: true, where: filtros.facetas, attributes: [] }]
+        : []),
+    ],
+    distinct: true,
+    // Todas las relaciones incluidas son 1:1.
+    subQuery: false,
+    order: ordenes[filtros.orden],
+    limit: filtros.limite,
+    offset: (filtros.pagina - 1) * filtros.limite,
+  });
+
+  return {
+    productos: rows,
+    total: count,
+    pagina: filtros.pagina,
+    totalPaginas: Math.ceil(count / filtros.limite),
+    porPagina: filtros.limite,
+  };
+};
+
+const obtenerMarcasCatalogo = async () => {
+  const tiendasActivas = await Tienda.findAll({
+    where: { estado: 'activa' }, attributes: ['idTienda'], raw: true,
+  });
+  const facetas = await FacetaProducto.findAll({
+    attributes: ['marca'],
+    include: [{
+      model: Producto, as: 'producto', attributes: [], required: true,
+      where: { [Op.or]: [
+        { idTienda: null },
+        { idTienda: { [Op.in]: tiendasActivas.map((tienda) => tienda.idTienda) } },
+      ] },
+    }],
+    where: { marca: { [Op.ne]: null } },
+    group: ['FacetaProducto.marca'],
+    order: [['marca', 'ASC']],
+    raw: true,
+  });
+  return facetas.map((fila) => fila.marca);
 };
 
 // Buscador predictivo del encabezado (ronda 2, ver docs/frontend-diseno.md):
@@ -655,6 +764,7 @@ const eliminarProducto = async (id, usuario) => {
     // fallar producto.destroy() y por lo tanto toda la transacción), la
     // imagen no es un dato de negocio que deba bloquear el borrado.
     await ImagenProducto.destroy({ where: { idProducto }, transaction });
+    await FacetaProducto.destroy({ where: { idProducto }, transaction });
     // Mismo motivo que ImagenProducto (hallazgo real de Codex, ronda 2,
     // Etapa 5): que un cliente haya marcado el producto como favorito no es
     // un dato de negocio que deba bloquear su borrado (a diferencia de
@@ -722,6 +832,8 @@ export {
   // mismo shape que el resto del catálogo — sin duplicar este arreglo.
   relaciones,
   obtenerProductos,
+  obtenerCatalogo,
+  obtenerMarcasCatalogo,
   obtenerSugerenciasBusqueda,
   obtenerProductosConStockBajo,
   obtenerProductoPorId,

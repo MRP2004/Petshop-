@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 260" role="img" aria-label="Ilustración de Accesorios para Pez">
+  <rect width="320" height="260" rx="22" fill="#c4e6e5"/>
+  <circle cx="266" cy="35" r="45" fill="#fff" opacity=".38"/>
+  <circle cx="47" cy="222" r="39" fill="#fff" opacity=".30"/>
+  <g color="#346d70"><ellipse cx="160" cy="150" rx="62" ry="26" fill="#fff" stroke="currentColor" stroke-width="5"/><path d="M98 144l16 35h92l16-35" fill="#fff" stroke="currentColor" stroke-width="5"/><path d="M107 139h106" stroke="currentColor" stroke-width="5"/></g>
+  <text x="160" y="218" text-anchor="middle" fill="#346d70" font-family="Arial,sans-serif" font-weight="700" font-size="18">Accesorios</text>
+  <text x="160" y="243" text-anchor="middle" fill="#346d70" font-family="Arial,sans-serif" font-size="14">Pez</text>
+</svg>

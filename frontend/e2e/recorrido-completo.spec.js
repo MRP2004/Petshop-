@@ -81,7 +81,9 @@ test.describe('Caso de uso: registrar una venta y solicitar su cancelación (cli
     await page.getByRole('menuitem', { name: 'Salir' }).click();
     const dialogoSalir = page.getByRole('alertdialog');
     await dialogoSalir.getByRole('button', { name: 'Salir' }).click();
-    await expect(page.getByRole('link', { name: /Ingresar/i })).toBeVisible();
+    // La ruta de compra está protegida: al cerrar sesión redirige a
+    // /iniciar-sesion, cuyo encabezado reducido no muestra "Ingresar".
+    await expect(page).toHaveURL(/\/iniciar-sesion/);
 
     // El personal ve la solicitud pendiente y la aprueba (con confirmación
     // explícita — ver VentaDetalle.jsx): reutiliza la misma cancelación

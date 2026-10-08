@@ -14,6 +14,7 @@ const ENTORNO = process.env.ENTORNO || 'desarrollo';
 const BASES_PERMITIDAS_POR_ENTORNO = {
   e2e: process.env.E2E_DB_NAME_PERMITIDA || 'petshop_e2e',
   test: process.env.INTEGRACION_DB_NAME_PERMITIDA || 'petshop_test',
+  catalogo: 'petshop_catalogo_demo',
 };
 
 const startServer = async () => {

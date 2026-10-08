@@ -7,11 +7,13 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "dev:e2e": "node src/server.js dotenv_config_path=.env.e2e",
+    "dev:catalogo": "node src/server.js dotenv_config_path=.env.catalogo",
     "test": "node --test",
     "test:integracion": "node --test --test-concurrency=1 test-integracion/*.integracion.js",
     "preparar:base-test": "node scripts/prepararBaseTest.js",
     "sembrar:demo": "node scripts/sembrarDatosDemo.js",
-    "sembrar:e2e": "node scripts/sembrarDatosE2E.js dotenv_config_path=.env.e2e"
+    "sembrar:e2e": "node scripts/sembrarDatosE2E.js dotenv_config_path=.env.e2e",
+    "sembrar:catalogo": "node scripts/sembrarCatalogoMasivo.js dotenv_config_path=.env.catalogo --confirmar"
   },
   "keywords": [],
   "author": "",

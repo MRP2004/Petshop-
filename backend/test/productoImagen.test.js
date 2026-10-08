@@ -150,7 +150,7 @@ test('POST /api/productos con urlImagen sin http/https responde 400 y no crea el
 
   assert.equal(
     respuesta.body.error,
-    'La URL de la imagen debe empezar con http:// o https://',
+    'La URL de la imagen debe usar http(s) o una imagen local de demostración',
   );
   assert.equal(imagenAlmacenada, null);
 });

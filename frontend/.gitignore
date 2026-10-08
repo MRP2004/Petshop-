@@ -13,6 +13,7 @@ dist-ssr
 *.local
 .env
 .env.e2e
+.env.catalogo
 test-results
 playwright-report
 blob-report

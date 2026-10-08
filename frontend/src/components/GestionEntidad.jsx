@@ -45,8 +45,9 @@ const prepararValor = (campo, valorCrudo) => {
   return valorCrudo === '' ? undefined : valorCrudo;
 };
 
-const GestionEntidad = ({ titulo, servicio, campos, columnas, idCampo, renderAccionesExtra }) => {
+const GestionEntidad = ({ titulo, servicio, campos, columnas, idCampo, renderAccionesExtra, filtrarFilas }) => {
   const { datos: filas, cargando, error, recargar } = useCargaDatos(useCallback(() => servicio.listar(), [servicio]));
+  const filasVisibles = filtrarFilas && filas ? filas.filter(filtrarFilas) : filas;
   const [edicion, setEdicion] = useState(null); // null = cerrado, {} = alta, {...fila} = edición
   const [formulario, setFormulario] = useState({});
   const [errorFormulario, setErrorFormulario] = useState(null);
@@ -145,9 +146,9 @@ const GestionEntidad = ({ titulo, servicio, campos, columnas, idCampo, renderAcc
 
       {cargando && <EstadoCarga />}
       {error && <EstadoError mensaje={error} onReintentar={recargar} />}
-      {!cargando && !error && filas?.length === 0 && <EstadoVacio />}
+      {!cargando && !error && filasVisibles?.length === 0 && <EstadoVacio />}
 
-      {!cargando && !error && filas?.length > 0 && (
+      {!cargando && !error && filasVisibles?.length > 0 && (
         <div className="gestion-entidad__tabla-scroll">
           <table className="gestion-entidad__tabla">
             <thead>
@@ -159,7 +160,7 @@ const GestionEntidad = ({ titulo, servicio, campos, columnas, idCampo, renderAcc
               </tr>
             </thead>
             <tbody>
-              {filas.map((fila) => (
+              {filasVisibles.map((fila) => (
                 <tr key={fila[idCampo]}>
                   {columnas.map((columna) => (
                     <td key={columna.clave}>

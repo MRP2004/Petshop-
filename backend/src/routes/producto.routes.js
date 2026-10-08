@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import {
   listar,
+  listarCatalogo,
+  listarMarcas,
   sugerencias,
   listarStockBajo,
   buscarPorId,
@@ -29,6 +31,8 @@ const soloPersonalOTiendaPropia = [
 // Catálogo de lectura: público, como en cualquier tienda (Chewy incluido) se
 // puede navegar sin haber iniciado sesión.
 router.get('/', listar);
+router.get('/catalogo', listarCatalogo);
+router.get('/marcas', listarMarcas);
 // Antes de '/:id' a propósito (mismo motivo que /stock-bajo): si no, Express
 // interpretaría "sugerencias"/"stock-bajo" como un :id y nunca llegaría acá.
 // Buscador predictivo del encabezado (ronda 2): también público, igual que

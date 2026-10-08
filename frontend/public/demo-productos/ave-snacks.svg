@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 260" role="img" aria-label="Ilustración de Snacks para Ave">
+  <rect width="320" height="260" rx="22" fill="#f6dba3"/>
+  <circle cx="266" cy="35" r="45" fill="#fff" opacity=".38"/>
+  <circle cx="47" cy="222" r="39" fill="#fff" opacity=".30"/>
+  <g color="#765419"><rect x="111" y="100" width="98" height="83" rx="10" fill="#fff" stroke="currentColor" stroke-width="5"/><path d="M121 100l12-20h54l12 20" fill="#fff" stroke="currentColor" stroke-width="5"/><circle cx="160" cy="142" r="20" fill="none" stroke="currentColor" stroke-width="5"/></g>
+  <text x="160" y="218" text-anchor="middle" fill="#765419" font-family="Arial,sans-serif" font-weight="700" font-size="18">Snacks</text>
+  <text x="160" y="243" text-anchor="middle" fill="#765419" font-family="Arial,sans-serif" font-size="14">Ave</text>
+</svg>

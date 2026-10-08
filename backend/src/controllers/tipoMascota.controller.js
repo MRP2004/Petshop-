@@ -1,5 +1,6 @@
 import {
   obtenerTiposMascota,
+  obtenerJerarquiaMascotas,
   obtenerTipoMascotaPorId,
   crearTipoMascota,
   actualizarTipoMascota,
@@ -50,6 +51,14 @@ export const eliminar = async (req, res, next) => {
   try {
     await eliminarTipoMascota(req.params.id);
     res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const listarJerarquia = async (req, res, next) => {
+  try {
+    res.status(200).json(await obtenerJerarquiaMascotas());
   } catch (error) {
     next(error);
   }

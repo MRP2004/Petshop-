@@ -68,7 +68,7 @@ const asegurarFrontendUsaBackendValidado = async (baseURLFrontend, urlBackendVal
     // pathname antes del GET real; sin filtrar por método, esta espera
     // podía resolverse con ese OPTIONS en vez de con el pedido real.
     const esperaPeticionApi = pagina.waitForRequest(
-      (peticion) => peticion.method() === 'GET' && new URL(peticion.url()).pathname === '/api/productos',
+      (peticion) => peticion.method() === 'GET' && new URL(peticion.url()).pathname === '/api/productos/catalogo',
       { timeout: 15_000 },
     );
 
@@ -89,7 +89,7 @@ const asegurarFrontendUsaBackendValidado = async (baseURLFrontend, urlBackendVal
       peticion = await esperaPeticionApi;
     } catch (error) {
       throw new Error(
-        `El frontend en ${baseURLFrontend} no pidió el catálogo (GET .../api/productos) ` +
+        `El frontend en ${baseURLFrontend} no pidió el catálogo (GET .../api/productos/catalogo) ` +
           `dentro de 15s al cargar la página de inicio. Abortando: sin esa petición no ` +
           'hay forma de confirmar contra qué backend habla de verdad.',
         { cause: error },
