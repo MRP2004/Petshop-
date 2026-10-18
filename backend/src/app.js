@@ -19,6 +19,7 @@ import favoritoRoutes from './routes/favorito.routes.js';
 import avisoRoutes from './routes/aviso.routes.js';
 import solicitudVendedorRoutes from './routes/solicitudVendedor.routes.js';
 import tiendaRoutes from './routes/tienda.routes.js';
+import carritoRoutes from './routes/carrito.routes.js';
 
 import {
   rutaNoEncontrada,
@@ -132,6 +133,7 @@ app.use('/api/favoritos', favoritoRoutes);
 app.use('/api/avisos', avisoRoutes);
 app.use('/api/solicitudes-vendedor', solicitudVendedorRoutes);
 app.use('/api/tiendas', tiendaRoutes);
+app.use('/api/carrito', carritoRoutes);
 
 app.use(rutaNoEncontrada);
 app.use(manejarErrores);

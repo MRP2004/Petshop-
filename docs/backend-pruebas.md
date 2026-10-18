@@ -68,8 +68,11 @@ cd backend
 DOTENV_CONFIG_PATH=.env.test npm run test:integracion
 ```
 
-Archivos agregados en la Etapa 9 de la ronda 2:
+Archivos y cobertura destacada:
 
+- `carrito.integracion.js`: persistencia y operaciones del carrito por
+  cuenta, aislamiento entre los cuatro roles autenticados, importación
+  condicional del carrito anónimo y rechazo de entradas inválidas.
 - `marketplaceCompra.integracion.js` (8 pruebas): compra mixta con un
   producto de PetShop y dos tiendas (total, stock, un aviso por tienda,
   "Mis ventas" de cada vendedor), reintento idempotente sin avisos nuevos,
@@ -115,13 +118,11 @@ Archivos y alcance:
 | `test-integracion/envioADomicilio.integracion.js` | **Nuevo en esta corrección**: la fila de `direccionentrega` queda persistida de verdad para "envío a domicilio"; "retiro en sucursal" no crea ninguna; rollback real — si la venta falla (stock insuficiente de un segundo producto), no queda ninguna venta ni domicilio huérfano. |
 | `test-integracion/productoImagen.integracion.js` | **Nuevo en esta corrección** ("producto e imagen como una operación atómica"): alta completa persiste ambas filas relacionadas; actualizar reemplaza la URL sin duplicar la fila; borrado permitido elimina ambas; **rollback real** — un borrado bloqueado por una venta asociada (`ForeignKeyConstraintError` real) no deja el producto sin su imagen (reproduce contra MySQL real el hallazgo original). |
 
-`ayudaIntegracion.js#limpiarDatos` ahora también limpia `usuario`,
-`promocionproducto` y `direccionentrega` (las tres tablas agregadas después
-de que existiera esta limpieza), en el orden que respeta sus relaciones
-(hijas antes que `cliente`/`producto`/`categoria`/`venta`). Incluye fixtures
-(`crearUsuarioDePrueba`, `crearPromocionDePrueba`) que crean también su
-`Cliente`/`Producto` relacionado si no se pasa uno explícito, para no
-insertar filas que violen una FK obligatoria.
+`ayudaIntegracion.js#limpiarDatos` limpia `itemcarrito` antes de borrar los
+usuarios y productos referenciados. Incluye fixtures (`crearUsuarioDePrueba`,
+`crearPromocionDePrueba`) que crean también su `Cliente`/`Producto`
+relacionado si no se pasa uno explícito, para no insertar filas que violen
+una FK obligatoria.
 
 ### Sincronización determinista en las pruebas de concurrencia
 
