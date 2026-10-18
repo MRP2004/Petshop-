@@ -19,7 +19,7 @@ cualquier consulta de productos falla si falta `producto.idTienda`).
 | # | Comando (desde `backend/`) | Qué cambia | ¿Toca datos? |
 |---|---|---|---|
 | 0 | `node scripts/verificarEsquemaActual.js` | Nada (solo lectura). Lista qué falta. | No |
-| 1 | `node scripts/crearTablasNuevas.js --confirmar` | Crea las tablas nuevas que falten (CU-04, `direccioncliente`, `favorito`, `aviso`, `tienda`, `solicitudvendedor`, etc.). No toca las existentes. | No |
+| 1 | `node scripts/crearTablasNuevas.js --confirmar` | Crea las tablas nuevas que falten (CU-04, `direccioncliente`, `favorito`, `aviso`, `tienda`, `solicitudvendedor`, `itemcarrito`, etc.). No toca las existentes. | No |
 | 2 | `node scripts/migrarCU04Ronda2.js --confirmar` | Índice único en `mediopago.nombre`; ENUM de `comprobante.estadoCorreo` (amplía, convierte `'enviado'` → `'simulado'`, angosta); 3 columnas nuevas en `comprobante`. | **Sí**: el `UPDATE` de `estadoCorreo`. Aborta sin cambios si hay nombres de medio de pago duplicados. |
 | 3 | `node scripts/migrarRonda2Etapa7.js --confirmar` | Amplía el ENUM `venta.estado` (+`lista_para_retirar`, `entregada`). | No: ninguna venta cambia de estado. |
 | 4 | `node scripts/migrarRonda2Etapa8.js --confirmar` | Amplía el ENUM `usuario.rol` (+`vendedor_independiente`); agrega `producto.idTienda` (NULL) con FK a `tienda`. | No: ninguna cuenta ni producto cambia. |

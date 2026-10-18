@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useCarrito } from '../hooks/useCarrito.js';
 import { useAuth } from '../hooks/useAuth.js';
-import { EstadoVacio } from '../components/EstadosSolicitud.jsx';
+import { EstadoCarga, EstadoError, EstadoVacio } from '../components/EstadosSolicitud.jsx';
 import './Carrito.css';
 
 const formateador = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' });
@@ -11,7 +11,16 @@ const formateador = new Intl.NumberFormat('es-AR', { style: 'currency', currency
 // nada que mande el navegador), así que si un precio cambió entre agregar al
 // carrito y confirmar, prevalece el valor real del servidor.
 const Carrito = () => {
-  const { carrito, actualizarCantidad, quitarProducto, vaciarCarrito } = useCarrito();
+  const {
+    carrito,
+    actualizarCantidad,
+    quitarProducto,
+    vaciarCarrito,
+    cargandoCarrito,
+    estaListo,
+    reintentarCarga,
+    operacionesPendientes,
+  } = useCarrito();
   const { estaAutenticado } = useAuth();
   const navegar = useNavigate();
 
@@ -22,6 +31,19 @@ const Carrito = () => {
     }
     navegar('/checkout');
   };
+
+  if (cargandoCarrito) {
+    return <div className="pagina contenedor"><EstadoCarga mensaje="Cargando tu carrito…" /></div>;
+  }
+
+  if (!estaListo) {
+    return (
+      <div className="pagina contenedor">
+        <h1 className="titulo-pagina">Tu carrito</h1>
+        <EstadoError mensaje="No se pudo preparar el carrito. Revisá el aviso y volvé a intentarlo." onReintentar={reintentarCarga} />
+      </div>
+    );
+  }
 
   if (carrito.estaVacio) {
     return (
@@ -52,6 +74,7 @@ const Carrito = () => {
               min="1"
               max={item.producto.stockActual}
               value={item.cantidad}
+              disabled={operacionesPendientes > 0}
               onChange={(evento) =>
                 actualizarCantidad(item.producto.idProducto, Number(evento.target.value) || 1)
               }
@@ -64,6 +87,7 @@ const Carrito = () => {
               type="button"
               className="boton-enlace"
               onClick={() => quitarProducto(item.producto.idProducto)}
+              disabled={operacionesPendientes > 0}
             >
               Quitar
             </button>
@@ -72,7 +96,12 @@ const Carrito = () => {
       </ul>
 
       <div className="carrito__resumen">
-        <button type="button" className="boton boton-secundario" onClick={vaciarCarrito}>
+        <button
+          type="button"
+          className="boton boton-secundario"
+          onClick={vaciarCarrito}
+          disabled={operacionesPendientes > 0}
+        >
           Vaciar carrito
         </button>
 
@@ -81,7 +110,12 @@ const Carrito = () => {
           <strong>{formateador.format(carrito.total)}</strong>
         </div>
 
-        <button type="button" className="boton boton-primario" onClick={irACheckout}>
+        <button
+          type="button"
+          className="boton boton-primario"
+          onClick={irACheckout}
+          disabled={operacionesPendientes > 0}
+        >
           Confirmar compra
         </button>
       </div>

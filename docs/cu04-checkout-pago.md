@@ -44,8 +44,10 @@ No reemplaza ni cambia el comportamiento de:
 - Confirmación de compra atómica e idempotente (`POST /api/compras`):
   revalida stock, precio y medio de pago dentro de la misma transacción, y
   solo si el pago simulado se aprueba registra venta, detalle histórico,
-  descuento de stock, comprobante numerado y pago.
+  descuento de stock, comprobante numerado y pago; también elimina el
+  carrito persistido de esa cuenta dentro de esa transacción.
 - Un pago simulado rechazado **nunca** crea una venta ni toca stock.
+  Tampoco vacía el carrito: los productos siguen disponibles para reintentar.
 - Reintentar la misma compra (misma clave, mismo contenido) devuelve la
   misma venta, sin duplicar nada — incluso si se reintenta después de
   recargar la página o de perder la respuesta.
@@ -536,9 +538,9 @@ solo porque esta consulta no encontró nada.
   ciegas.
 
 Mecanismo en el backend (`compra.service.js#confirmarCompra`, dentro de una
-única transacción, orden de locks fijo — intento → medio de pago →
-productos — para que ninguna transacción concurrente pueda esperarse en un
-ciclo):
+única transacción, bloquea el intento → medio de pago → productos → fila
+de usuario al vaciar su carrito persistido. Las operaciones del carrito
+bloquean primero esa misma fila de usuario, coordinándose con la compra):
 
 1. `INSERT ... ON DUPLICATE KEY UPDATE` (no-op) sobre `intentocompra`
    (clave única compuesta `claveIdempotencia` + `idCliente`), seguido de

@@ -38,6 +38,27 @@ completo (roles, matriz de permisos, usuarios de prueba). Resumen rápido:
   [backend-autenticacion.md](backend-autenticacion.md)): sin él, o si no
   coincide, `403 { "error": "Token CSRF inválido o ausente" }`.
 
+## Carrito persistente
+
+Todas las rutas requieren una sesión autenticada. Cada operación usa
+`idUsuario` del token; el cliente no puede elegir qué cuenta leer o
+modificar. Todos los roles tienen su propio carrito, pero ninguno puede
+acceder al carrito de otra cuenta.
+
+| Ruta | Acción |
+|---|---|
+| `GET /api/carrito` | Devuelve `{ items: [{ producto, cantidad }] }`; sin productos devuelve `{ items: [] }`. |
+| `POST /api/carrito/items` | Suma la cantidad indicada a ese producto. Body: `{ idProducto, cantidad }`; cantidad predeterminada: `1`. |
+| `PUT /api/carrito/items/:idProducto` | Establece una cantidad positiva. Body: `{ cantidad }`. |
+| `DELETE /api/carrito/items/:idProducto` | Quita ese producto si está en el carrito. |
+| `DELETE /api/carrito` | Vacía el carrito propio. |
+| `PUT /api/carrito/importar` | Importa `{ items: [{ idProducto, cantidad }] }` solo si la cuenta todavía no tiene productos. Responde `{ importado, items }`; si ya hay productos devuelve el carrito de la cuenta sin reemplazarlo. |
+
+El carrito guarda identificadores y cantidades, no reserva stock ni fija
+precios. El precio y la disponibilidad se vuelven a comprobar durante la
+compra. El import condicional permite adoptar el carrito anónimo del
+navegador sin sobrescribir uno que ya pertenece a la cuenta.
+
 ## Productos
 
 | Ruta | Acceso | Notas |

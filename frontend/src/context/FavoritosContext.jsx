@@ -3,8 +3,8 @@ import favoritosApi from '../api/favoritos.api.js';
 import { useAuth } from '../hooks/useAuth.js';
 import ContextoFavoritos from './favoritosContextBase.js';
 
-// A diferencia del carrito (localStorage, previo a la compra, sin dueño),
-// los favoritos son datos propios del comprador (ver favorito.routes.js:
+// Al igual que los carritos autenticados, los favoritos son datos propios
+// de una cuenta (ver favorito.routes.js:
 // rol 'cliente' o, desde la Etapa 8, 'vendedor_independiente' — sigue
 // siendo comprador —, siempre el idCliente de la sesión) — se guardan en
 // el backend, no en localStorage, para que persistan entre dispositivos y

@@ -72,8 +72,8 @@ class Carrito {
     }));
   }
 
-  // Persistencia liviana en localStorage (por navegador, no sincronizada
-  // entre dispositivos ni con el backend: es solo conveniencia de UI).
+  // Restauración del carrito anónimo del navegador y validación de la forma
+  // recibida del backend. Los carritos autenticados se guardan en el servidor.
   static desdeAlmacenamiento(datosGuardados) {
     if (!Array.isArray(datosGuardados)) {
       return new Carrito();

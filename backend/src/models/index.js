@@ -26,3 +26,4 @@ import './favorito.model.js';
 import './aviso.model.js';
 import './tienda.model.js';
 import './solicitudVendedor.model.js';
+import './itemCarrito.model.js';

@@ -31,6 +31,7 @@ import '../src/models/favorito.model.js';
 import '../src/models/aviso.model.js';
 import '../src/models/tienda.model.js';
 import '../src/models/solicitudVendedor.model.js';
+import '../src/models/itemCarrito.model.js';
 import Cliente from '../src/models/cliente.model.js';
 import MedioPago from '../src/models/medioPago.model.js';
 import Producto from '../src/models/producto.model.js';
@@ -159,6 +160,7 @@ const limpiarDatos = async () => {
   await sequelize.query('DELETE FROM direccioncliente');
   await sequelize.query('DELETE FROM direccionentrega');
   await sequelize.query('DELETE FROM solicitudcancelacion');
+  await sequelize.query('DELETE FROM itemcarrito');
   await sequelize.query('DELETE FROM pago');
   await sequelize.query('DELETE FROM comprobante');
   await sequelize.query('DELETE FROM detalleventapromocion');

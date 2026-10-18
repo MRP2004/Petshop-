@@ -68,8 +68,11 @@ cd backend
 DOTENV_CONFIG_PATH=.env.test npm run test:integracion
 ```
 
-Archivos agregados en la Etapa 9 de la ronda 2:
+Archivos y cobertura destacada:
 
+- `carrito.integracion.js`: persistencia y operaciones del carrito por
+  cuenta, aislamiento entre los cuatro roles autenticados, importación
+  condicional del carrito anónimo y rechazo de entradas inválidas.
 - `marketplaceCompra.integracion.js` (8 pruebas): compra mixta con un
   producto de PetShop y dos tiendas (total, stock, un aviso por tienda,
   "Mis ventas" de cada vendedor), reintento idempotente sin avisos nuevos,
@@ -109,19 +112,18 @@ Archivos y alcance:
 
 | Archivo | Qué cubre |
 |---|---|
+| `test-integracion/compra.integracion.js` | **Carrito persistente al comprar**: la compra aprobada lo vacía; un pago rechazado lo conserva; si falla una escritura posterior al vaciado, MySQL revierte tanto la venta como el borrado; un reintento idempotente no borra productos agregados después. |
 | `test-integracion/ventaConcurrencia.integracion.js` | Venta válida (stock, importes), stock insuficiente (validación, sin escrituras), **rollback real después de escrituras dentro de la transacción** (restitución que desborda `INTEGER` al cancelar), subtotal individual fuera de rango con un descuento válido por sí mismo, total fuera de rango, cancelación y restitución exacta, doble cancelación secuencial, envío y transiciones inválidas, y tres escenarios de concurrencia real con contención confirmada: cancelar/enviar, doble cancelación simultánea, dos ventas simultáneas sin sobreventa. |
 | `test-integracion/stockYProducto.integracion.js` | Movimiento de stock (entrada y ajuste negativo), rechazo de stock negativo, PUT que no puede tocar el stock, y un escenario de concurrencia real (contención confirmada) de ajuste de stock simultáneo con una venta, sin pérdida de cambios. |
 | `test-integracion/crudBasico.integracion.js` | Relación inexistente al crear un producto, recorrido CRUD completo de Cliente, comportamiento real de la FK opcional al borrar una Categoría, y el error de clave foránea al borrar un Cliente con ventas — verificado en dos capas separadas (ver abajo). |
 | `test-integracion/envioADomicilio.integracion.js` | **Nuevo en esta corrección**: la fila de `direccionentrega` queda persistida de verdad para "envío a domicilio"; "retiro en sucursal" no crea ninguna; rollback real — si la venta falla (stock insuficiente de un segundo producto), no queda ninguna venta ni domicilio huérfano. |
 | `test-integracion/productoImagen.integracion.js` | **Nuevo en esta corrección** ("producto e imagen como una operación atómica"): alta completa persiste ambas filas relacionadas; actualizar reemplaza la URL sin duplicar la fila; borrado permitido elimina ambas; **rollback real** — un borrado bloqueado por una venta asociada (`ForeignKeyConstraintError` real) no deja el producto sin su imagen (reproduce contra MySQL real el hallazgo original). |
 
-`ayudaIntegracion.js#limpiarDatos` ahora también limpia `usuario`,
-`promocionproducto` y `direccionentrega` (las tres tablas agregadas después
-de que existiera esta limpieza), en el orden que respeta sus relaciones
-(hijas antes que `cliente`/`producto`/`categoria`/`venta`). Incluye fixtures
-(`crearUsuarioDePrueba`, `crearPromocionDePrueba`) que crean también su
-`Cliente`/`Producto` relacionado si no se pasa uno explícito, para no
-insertar filas que violen una FK obligatoria.
+`ayudaIntegracion.js#limpiarDatos` limpia `itemcarrito` antes de borrar los
+usuarios y productos referenciados. Incluye fixtures (`crearUsuarioDePrueba`,
+`crearPromocionDePrueba`) que crean también su `Cliente`/`Producto`
+relacionado si no se pasa uno explícito, para no insertar filas que violen
+una FK obligatoria.
 
 ### Sincronización determinista en las pruebas de concurrencia
 
