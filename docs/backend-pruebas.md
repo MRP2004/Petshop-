@@ -112,6 +112,7 @@ Archivos y alcance:
 
 | Archivo | Qué cubre |
 |---|---|
+| `test-integracion/compra.integracion.js` | **Carrito persistente al comprar**: la compra aprobada lo vacía; un pago rechazado lo conserva; si falla una escritura posterior al vaciado, MySQL revierte tanto la venta como el borrado; un reintento idempotente no borra productos agregados después. |
 | `test-integracion/ventaConcurrencia.integracion.js` | Venta válida (stock, importes), stock insuficiente (validación, sin escrituras), **rollback real después de escrituras dentro de la transacción** (restitución que desborda `INTEGER` al cancelar), subtotal individual fuera de rango con un descuento válido por sí mismo, total fuera de rango, cancelación y restitución exacta, doble cancelación secuencial, envío y transiciones inválidas, y tres escenarios de concurrencia real con contención confirmada: cancelar/enviar, doble cancelación simultánea, dos ventas simultáneas sin sobreventa. |
 | `test-integracion/stockYProducto.integracion.js` | Movimiento de stock (entrada y ajuste negativo), rechazo de stock negativo, PUT que no puede tocar el stock, y un escenario de concurrencia real (contención confirmada) de ajuste de stock simultáneo con una venta, sin pérdida de cambios. |
 | `test-integracion/crudBasico.integracion.js` | Relación inexistente al crear un producto, recorrido CRUD completo de Cliente, comportamiento real de la FK opcional al borrar una Categoría, y el error de clave foránea al borrar un Cliente con ventas — verificado en dos capas separadas (ver abajo). |

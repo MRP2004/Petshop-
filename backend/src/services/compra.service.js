@@ -10,6 +10,7 @@ import Pago from '../models/pago.model.js';
 import MedioPago from '../models/medioPago.model.js';
 import IntentoCompra from '../models/intentoCompra.model.js';
 import AppError from '../errors/AppError.js';
+import { vaciarCarritoEnTransaccion } from './carrito.service.js';
 import { esObjetoPlano } from '../utils/validacion.js';
 import {
   prepararDetalles,
@@ -426,6 +427,12 @@ const confirmarCompra = async (datos, usuario, opciones = {}) => {
         },
         { transaction },
       );
+
+      // El carrito autenticado forma parte de la misma confirmación atómica:
+      // si cualquiera de las escrituras posteriores falla, la transacción
+      // restaura también sus filas. La rama idempotente aprobada retorna
+      // antes y no debe borrar productos agregados después de la compra.
+      await vaciarCarritoEnTransaccion(usuario.idUsuario, transaction);
 
       await IntentoCompra.update(
         { estado: 'aprobado', idVenta: venta.idVenta, actualizadoEn: new Date() },

@@ -42,9 +42,11 @@ El carrito guarda producto y cantidad, no reserva stock ni fija el precio.
 Una cantidad puede dejar de estar disponible antes de comprar; el checkout
 vuelve a consultar los precios y validar el stock antes de confirmar la
 venta. Al completarse la compra, el frontend solicita vaciar el carrito
-persistido. Por ahora ese vaciado ocurre después de confirmar la venta, no
-dentro de la misma transacción; hacer ambas operaciones atómicas queda para
-la siguiente entrega.
+persistido en la misma transacción del backend que registra la venta, el
+pago, el comprobante y el descuento de stock. Si algo falla antes del
+commit, tanto la compra como el vaciado se revierten; el carrito permanece
+intacto. Un reintento idempotente de una compra anterior no vacía productos
+que la persona haya agregado después.
 
 ## Piezas principales del código
 

@@ -15,6 +15,7 @@ import Comprobante from '../src/models/comprobante.model.js';
 import IntentoCompra from '../src/models/intentoCompra.model.js';
 import Producto from '../src/models/producto.model.js';
 import MedioPago from '../src/models/medioPago.model.js';
+import ItemCarrito from '../src/models/itemCarrito.model.js';
 import { confirmarCompra, consultarIntento } from '../src/services/compra.service.js';
 import { cotizar, aRespuestaPublica } from '../src/services/cotizacion.service.js';
 import { cancelarVenta, obtenerVentaPorId } from '../src/services/venta.service.js';
@@ -105,6 +106,125 @@ test('compra sin promoción, transferencia simulada: aprobada, descuenta stock, 
 
   const productoActualizado = await Producto.findByPk(producto.idProducto);
   assert.equal(productoActualizado.stockActual, 7);
+});
+
+test('compra aprobada vacía el carrito persistido de la cuenta', async () => {
+  const producto = await crearProductoDePrueba({ precio: '1000.00', stockActual: 10 });
+  await ItemCarrito.create({
+    idUsuario: usuarioCliente.idUsuario,
+    idProducto: producto.idProducto,
+    cantidad: 2,
+  });
+  const detalles = [{ idProducto: producto.idProducto, cantidad: 2 }];
+  const cotizacion = aRespuestaPublica(await cotizar(detalles));
+
+  const resultado = await confirmarCompra(
+    armarDatosCompra({ detalles, cotizacionAceptada: cotizacion }),
+    usuarioCliente,
+  );
+
+  assert.equal(resultado.tipo, 'aprobado');
+  assert.equal(await ItemCarrito.count({ where: { idUsuario: usuarioCliente.idUsuario } }), 0);
+});
+
+test('un pago rechazado conserva el carrito persistido', async () => {
+  const producto = await crearProductoDePrueba({ precio: '500.00', stockActual: 5 });
+  await ItemCarrito.create({
+    idUsuario: usuarioCliente.idUsuario,
+    idProducto: producto.idProducto,
+    cantidad: 1,
+  });
+  const detalles = [{ idProducto: producto.idProducto, cantidad: 1 }];
+  const cotizacion = aRespuestaPublica(await cotizar(detalles));
+
+  const resultado = await confirmarCompra(
+    armarDatosCompra({
+      detalles,
+      cotizacionAceptada: cotizacion,
+      tipoPagoSimulado: 'debito',
+      datosDebito: { ...datosDebitoAprobado, numero: NUMERO_TARJETA_RECHAZADA },
+    }),
+    usuarioCliente,
+  );
+
+  assert.equal(resultado.tipo, 'rechazado');
+  assert.equal(
+    await ItemCarrito.count({ where: { idUsuario: usuarioCliente.idUsuario } }),
+    1,
+  );
+  assert.equal(await Venta.count(), 0);
+});
+
+test('si falla una escritura posterior al vaciado, la transacción restaura venta y carrito', async () => {
+  const producto = await crearProductoDePrueba({ precio: '500.00', stockActual: 5 });
+  await ItemCarrito.create({
+    idUsuario: usuarioCliente.idUsuario,
+    idProducto: producto.idProducto,
+    cantidad: 1,
+  });
+  const detalles = [{ idProducto: producto.idProducto, cantidad: 1 }];
+  const cotizacion = aRespuestaPublica(await cotizar(detalles));
+  const nombreHook = 'forzar-fallo-despues-de-vaciar-carrito';
+  IntentoCompra.addHook('beforeBulkUpdate', nombreHook, () => {
+    throw new Error('Fallo de prueba después del vaciado del carrito');
+  });
+
+  try {
+    await assert.rejects(
+      confirmarCompra(
+        armarDatosCompra({ detalles, cotizacionAceptada: cotizacion }),
+        usuarioCliente,
+      ),
+      /Fallo de prueba después del vaciado del carrito/,
+    );
+  } finally {
+    IntentoCompra.removeHook('beforeBulkUpdate', nombreHook);
+  }
+
+  assert.equal(await Venta.count(), 0);
+  assert.equal(
+    await ItemCarrito.count({ where: { idUsuario: usuarioCliente.idUsuario } }),
+    1,
+  );
+  assert.equal(await IntentoCompra.count(), 0);
+});
+
+test('un reintento idempotente no vacía los productos añadidos después de la compra', async () => {
+  const producto = await crearProductoDePrueba({ precio: '500.00', stockActual: 5 });
+  const otroProducto = await crearProductoDePrueba({ precio: '700.00', stockActual: 5 });
+  const detalles = [{ idProducto: producto.idProducto, cantidad: 1 }];
+  const cotizacion = aRespuestaPublica(await cotizar(detalles));
+  const claveIdempotencia = nuevaClave();
+  const datos = armarDatosCompra({
+    detalles,
+    cotizacionAceptada: cotizacion,
+    claveIdempotencia,
+  });
+
+  const primeraRespuesta = await confirmarCompra(datos, usuarioCliente);
+  await ItemCarrito.create({
+    idUsuario: usuarioCliente.idUsuario,
+    idProducto: otroProducto.idProducto,
+    cantidad: 1,
+  });
+  const segundaRespuesta = await confirmarCompra(datos, usuarioCliente);
+
+  assert.equal(segundaRespuesta.tipo, 'aprobado');
+  assert.equal(segundaRespuesta.reintento, true);
+  assert.equal(segundaRespuesta.venta.idVenta, primeraRespuesta.venta.idVenta);
+  assert.equal(
+    await ItemCarrito.count({ where: { idUsuario: usuarioCliente.idUsuario } }),
+    1,
+  );
+  assert.equal(
+    await ItemCarrito.count({
+      where: {
+        idUsuario: usuarioCliente.idUsuario,
+        idProducto: otroProducto.idProducto,
+      },
+    }),
+    1,
+  );
 });
 
 test('compra con promoción (proveedor de precios controlado): aplica descuento y lo persiste como histórico', async () => {

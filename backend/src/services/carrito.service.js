@@ -150,9 +150,18 @@ const vaciarCarritoPropio = async (idUsuarioCrudo) => {
   const idUsuario = validarIdUsuario(idUsuarioCrudo);
 
   return sequelize.transaction(async (transaction) => {
-    await buscarUsuarioBloqueado(idUsuario, transaction);
-    await ItemCarrito.destroy({ where: { idUsuario }, transaction });
+    await vaciarCarritoEnTransaccion(idUsuario, transaction);
   });
+};
+
+const vaciarCarritoEnTransaccion = async (idUsuarioCrudo, transaction) => {
+  if (!transaction || transaction.finished) {
+    throw new Error('Se requiere una transacción activa para vaciar el carrito');
+  }
+
+  const idUsuario = validarIdUsuario(idUsuarioCrudo);
+  await buscarUsuarioBloqueado(idUsuario, transaction);
+  return ItemCarrito.destroy({ where: { idUsuario }, transaction });
 };
 
 // Importa el carrito anónimo solo si la cuenta todavía no tiene productos.
@@ -199,5 +208,6 @@ export {
   actualizarCantidadCarritoPropio,
   quitarDelCarritoPropio,
   vaciarCarritoPropio,
+  vaciarCarritoEnTransaccion,
   importarSiEstaVacio,
 };
