@@ -7,6 +7,7 @@ import { CarritoProvider } from '../context/CarritoContext.jsx';
 import { AuthProvider } from '../context/AuthContext.jsx';
 import { ErrorApi } from '../api/httpClient.js';
 import comprasApi from '../api/compras.api.js';
+import carritoApi from '../api/carrito.api.js';
 import clientesApi from '../api/clientes.api.js';
 import * as authApi from '../api/auth.api.js';
 
@@ -15,6 +16,17 @@ import * as authApi from '../api/auth.api.js';
 // red, no el carrito ni el componente.
 vi.mock('../api/compras.api.js', () => ({
   default: { cotizar: vi.fn(), confirmar: vi.fn(), consultarIntento: vi.fn() },
+}));
+
+vi.mock('../api/carrito.api.js', () => ({
+  default: {
+    listar: vi.fn(),
+    agregar: vi.fn(),
+    actualizarCantidad: vi.fn(),
+    quitar: vi.fn(),
+    vaciar: vi.fn(),
+    importar: vi.fn(),
+  },
 }));
 
 // Ronda 2: el wrapper de Checkout pide la dirección guardada del cliente
@@ -84,6 +96,15 @@ describe('Checkout', () => {
     localStorage.clear();
     sembrarCarrito();
     authApi.obtenerPerfil.mockResolvedValue(USUARIO_CLIENTE);
+    carritoApi.listar.mockResolvedValue({ items: [] });
+    carritoApi.importar.mockImplementation(async (items) => ({
+      importado: true,
+      items: items.map(({ idProducto, cantidad }) => ({
+        producto: idProducto === producto.idProducto ? producto : null,
+        cantidad,
+      })),
+    }));
+    carritoApi.vaciar.mockResolvedValue(null);
   });
 
   it('muestra el resumen que devuelve la cotización del backend, no el precio local del carrito', async () => {
@@ -155,6 +176,7 @@ describe('Checkout', () => {
     expect(cuerpoEnviado.cotizacionAceptada).toEqual(cotizacionBase);
     expect(typeof cuerpoEnviado.claveIdempotencia).toBe('string');
     expect(cuerpoEnviado.claveIdempotencia.length).toBeGreaterThan(0);
+    await waitFor(() => expect(carritoApi.vaciar).toHaveBeenCalledOnce());
   });
 
   it('si la cotización quedó desactualizada (409), muestra el resumen nuevo y NO navega', async () => {
@@ -238,6 +260,7 @@ describe('Checkout', () => {
     expect(await screen.findByText('pantalla-comprobante')).toBeInTheDocument();
     expect(comprasApi.consultarIntento).toHaveBeenCalledWith('clave-guardada-aprobada');
     expect(comprasApi.cotizar).not.toHaveBeenCalled();
+    expect(carritoApi.vaciar).toHaveBeenCalledOnce();
     expect(localStorage.getItem('petshop_compra_en_curso')).toBeNull();
   });
 

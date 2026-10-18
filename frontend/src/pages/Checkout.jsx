@@ -462,12 +462,28 @@ const CheckoutInterno = ({ usuario, direccionGuardada }) => {
 // wrapper no depende de ese orden implícito.
 const Checkout = () => {
   const { usuario } = useAuth();
+  const {
+    estaListo: carritoListo,
+    cargandoCarrito,
+    reintentarCarga,
+  } = useCarrito();
   const { datos: direccionGuardada, cargando: cargandoDireccion } = useCargaDatos(
     useCallback(() => clientesApi.obtenerDireccion().catch(() => null), []),
   );
 
-  if (!usuario || cargandoDireccion) {
+  if (!usuario || cargandoDireccion || cargandoCarrito) {
     return <div className="pagina contenedor"><EstadoCarga mensaje="Verificando sesión…" /></div>;
+  }
+
+  if (!carritoListo) {
+    return (
+      <div className="pagina contenedor">
+        <EstadoError
+          mensaje="No se pudo cargar tu carrito para iniciar la compra."
+          onReintentar={reintentarCarga}
+        />
+      </div>
+    );
   }
 
   return <CheckoutInterno usuario={usuario} direccionGuardada={direccionGuardada} />;

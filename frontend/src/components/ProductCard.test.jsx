@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import ProductCard from './ProductCard.jsx';
@@ -69,7 +69,9 @@ describe('ProductCard', () => {
 
     expect(screen.getByTestId('cantidad-carrito')).toHaveTextContent('0');
 
-    await userEvent.click(screen.getByRole('button', { name: /Agregar al carrito/i }));
+    const botonAgregar = await screen.findByRole('button', { name: /carrito/i });
+    await waitFor(() => expect(botonAgregar).toBeEnabled());
+    await userEvent.click(botonAgregar);
 
     expect(screen.getByTestId('cantidad-carrito')).toHaveTextContent('1');
   });

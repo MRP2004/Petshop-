@@ -353,12 +353,14 @@ error), la garantía real anti-duplicado es el índice único, no solo la
 capa de aplicación.
 
 **`FavoritosContext`** (`frontend/src/context/FavoritosContext.jsx`,
-nuevo): a diferencia del carrito (estado local en `localStorage`, sin
-dueño, previo a la compra), los favoritos son datos propios del cliente —
-se guardan en el backend, no en el navegador, para persistir entre
-dispositivos. Se recargan cada vez que cambia de cliente (login/logout, o
-alternar entre una cuenta de cliente y una de personal) y se vacían sin
-llamar a la API cuando no hay cliente logueado. `alternarFavorito` es
+nuevo): los favoritos pertenecen al cliente y el carrito autenticado a la
+cuenta de usuario; ambos se guardan en el backend, no en el navegador, para
+persistir entre dispositivos. El carrito anónimo sigue temporalmente en
+`localStorage` y, al iniciar sesión, solo se importa si la cuenta todavía no
+tiene productos (ver [carrito.md](carrito.md)). Los favoritos se recargan
+cada vez que cambia de cliente (login/logout, o alternar entre una cuenta
+de cliente y una de personal) y se vacían sin llamar a la API cuando no hay
+cliente logueado. `alternarFavorito` es
 optimista (refleja el cambio antes de que responda el servidor) con
 reversión automática si el backend rechaza el pedido.
 

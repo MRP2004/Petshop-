@@ -24,7 +24,7 @@ const formateador = new Intl.NumberFormat('es-AR', { style: 'currency', currency
 // precio, stock); "Agregar al carrito" y el favorito quedan como hermanos
 // del enlace, no anidados adentro.
 const ProductCard = ({ producto }) => {
-  const { agregarProducto } = useCarrito();
+  const { agregarProducto, cargandoCarrito, estaListo } = useCarrito();
   const sinStock = producto.stockActual <= 0;
   const pocoStock = !sinStock && producto.stockMinimo != null && producto.stockActual <= producto.stockMinimo;
 
@@ -62,7 +62,8 @@ const ProductCard = ({ producto }) => {
         type="button"
         className="boton boton-primario product-card__boton"
         onClick={manejarAgregar}
-        disabled={sinStock}
+        disabled={sinStock || cargandoCarrito || !estaListo}
+        aria-busy={cargandoCarrito}
       >
         Agregar al carrito 🛒
       </button>

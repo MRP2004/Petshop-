@@ -21,7 +21,7 @@ const formateador = new Intl.NumberFormat('es-AR', { style: 'currency', currency
 // instancia, y "cantidad"/"agregado" arrancan limpios de forma natural, sin
 // necesitar un efecto que los resetee manualmente.
 const ProductoDetalleContenido = ({ id }) => {
-  const { agregarProducto } = useCarrito();
+  const { agregarProducto, cargandoCarrito, estaListo } = useCarrito();
   const { datos: producto, cargando, error, recargar } = useCargaDatos(
     useCallback(() => productosApi.obtener(id), [id]),
   );
@@ -29,9 +29,9 @@ const ProductoDetalleContenido = ({ id }) => {
   const [cantidad, setCantidad] = useState(1);
   const [agregado, setAgregado] = useState(false);
 
-  const manejarAgregar = () => {
-    agregarProducto(producto, cantidad);
-    setAgregado(true);
+  const manejarAgregar = async () => {
+    const agregadoCorrectamente = await agregarProducto(producto, cantidad);
+    setAgregado(agregadoCorrectamente);
   };
 
   if (cargando) return <div className="pagina contenedor"><EstadoCarga /></div>;
@@ -92,7 +92,13 @@ const ProductoDetalleContenido = ({ id }) => {
                 setCantidad(Math.min(Math.max(valor || 1, 1), producto.stockActual));
               }}
             />
-            <button type="button" className="boton boton-primario" onClick={manejarAgregar}>
+            <button
+              type="button"
+              className="boton boton-primario"
+              onClick={manejarAgregar}
+              disabled={cargandoCarrito || !estaListo}
+              aria-busy={cargandoCarrito}
+            >
               Agregar al carrito 🛒
             </button>
           </div>
