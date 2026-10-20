@@ -24,7 +24,9 @@ const Navbar = () => {
   // Ronda 2: "Salir" ya no cierra la sesión directamente al hacer clic —
   // primero pide confirmación (ver docs/frontend-diseno.md, "Menú de
   // cuenta"). null-safe: solo importa mientras estaAutenticado es true.
-  const [mostrarConfirmacionSalir, setMostrarConfirmacionSalir] = useState(false);
+  // La confirmación pertenece a la sesión que la abrió; un cambio de cuenta
+  // no debe hacer reaparecer el diálogo anterior.
+  const [usuarioConfirmacionSalir, setUsuarioConfirmacionSalir] = useState(null);
   const ubicacion = useLocation();
   const { usuario, estaAutenticado, esPersonal, esVendedorIndependiente, cerrarSesion, cerrandoSesion, errorCierreSesion } = useAuth();
   const { carrito } = useCarrito();
@@ -64,7 +66,7 @@ const Navbar = () => {
 
   const cerrarConfirmacionSalir = () => {
     if (cerrandoSesion) return; // no se puede abortar un cierre ya en vuelo
-    setMostrarConfirmacionSalir(false);
+    setUsuarioConfirmacionSalir(null);
   };
 
   if (encabezadoReducido) {
@@ -131,7 +133,7 @@ const Navbar = () => {
                         { to: '/mis-favoritos', etiqueta: 'Mis favoritos' },
                       ]
               }
-              onPedirSalir={() => setMostrarConfirmacionSalir(true)}
+              onPedirSalir={() => setUsuarioConfirmacionSalir(usuario)}
             />
           ) : (
             <Link to="/iniciar-sesion" className="navbar__accion">
@@ -220,7 +222,7 @@ const Navbar = () => {
 
       {estaAutenticado && (
         <ConfirmDialog
-          abierto={mostrarConfirmacionSalir}
+          abierto={usuarioConfirmacionSalir === usuario}
           titulo="¿Querés cerrar sesión?"
           mensaje="Vas a salir de tu cuenta en este dispositivo."
           textoConfirmar="Salir"

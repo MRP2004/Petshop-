@@ -22,6 +22,17 @@ const iniciarSesion = async (page, { email, password }) => {
   await page.waitForURL((url) => !url.pathname.includes('/iniciar-sesion'));
 };
 
+const iniciarSesionSinRecargar = async (page, { email, password }) => {
+  if (new URL(page.url()).pathname === '/iniciar-sesion') {
+    await page.getByRole('link', { name: /Volver a la tienda/ }).click();
+  }
+  await page.getByRole('link', { name: /Ingresar/ }).click();
+  await page.getByLabel('Correo electrónico').fill(email);
+  await page.getByLabel('Contraseña').fill(password);
+  await page.getByRole('button', { name: 'Ingresar' }).click();
+  await page.waitForURL((url) => !url.pathname.includes('/iniciar-sesion'));
+};
+
 test.describe('Caso de uso: registrar una venta y solicitar su cancelación (cliente + personal)', () => {
   test('iniciar sesión, buscar un producto, agregar al carrito, confirmar la compra, solicitar la cancelación y que el personal la apruebe', async ({ page }) => {
     await iniciarSesion(page, CLIENTE);
@@ -89,7 +100,10 @@ test.describe('Caso de uso: registrar una venta y solicitar su cancelación (cli
     // explícita — ver VentaDetalle.jsx): reutiliza la misma cancelación
     // transaccional que la cancelación directa.
 
-    await iniciarSesion(page, VENDEDOR);
+    await iniciarSesionSinRecargar(page, VENDEDOR);
+    // El diálogo de logout de la cuenta anterior no debe reaparecer al
+    // iniciar sesión con otra cuenta sin recargar la aplicación.
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Panel \(vendedor\)/i })).toBeVisible();
     await page.goto(`/panel/ventas/${idVenta}`);
     await expect(page.getByText(/Solicitud de cancelación pendiente de tu revisión/)).toBeVisible();
