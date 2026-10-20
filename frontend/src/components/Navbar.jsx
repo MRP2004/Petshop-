@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 import { useCarrito } from '../hooks/useCarrito.js';
 import useCargaDatos from '../hooks/useCargaDatos.js';
@@ -28,6 +28,7 @@ const Navbar = () => {
   // no debe hacer reaparecer el diálogo anterior.
   const [usuarioConfirmacionSalir, setUsuarioConfirmacionSalir] = useState(null);
   const ubicacion = useLocation();
+  const navegar = useNavigate();
   const { usuario, estaAutenticado, esPersonal, esVendedorIndependiente, cerrarSesion, cerrandoSesion, errorCierreSesion } = useAuth();
   const { carrito } = useCarrito();
 
@@ -56,12 +57,12 @@ const Navbar = () => {
       etiqueta: categoria.nombre,
     }));
 
-  const confirmarSalir = () => {
-    // No hace falta cerrar el diálogo a mano en el caso exitoso: al salir,
-    // estaAutenticado pasa a false y todo este subárbol (incluido el
-    // diálogo) deja de renderizarse. Si falla, errorCierreSesion queda
-    // seteado y el diálogo sigue abierto mostrando el motivo (ver más abajo).
-    cerrarSesion();
+  const confirmarSalir = async () => {
+    const cierreConfirmado = await cerrarSesion();
+    if (cierreConfirmado) {
+      setUsuarioConfirmacionSalir(null);
+      navegar('/', { replace: true });
+    }
   };
 
   const cerrarConfirmacionSalir = () => {

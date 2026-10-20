@@ -92,9 +92,8 @@ test.describe('Caso de uso: registrar una venta y solicitar su cancelación (cli
     await page.getByRole('menuitem', { name: 'Salir' }).click();
     const dialogoSalir = page.getByRole('alertdialog');
     await dialogoSalir.getByRole('button', { name: 'Salir' }).click();
-    // La ruta de compra está protegida: al cerrar sesión redirige a
-    // /iniciar-sesion, cuyo encabezado reducido no muestra "Ingresar".
-    await expect(page).toHaveURL(/\/iniciar-sesion/);
+    // Al confirmar el cierre, vuelve a la página principal del sitio.
+    await expect(page).toHaveURL('/');
 
     // El personal ve la solicitud pendiente y la aprueba (con confirmación
     // explícita — ver VentaDetalle.jsx): reutiliza la misma cancelación
@@ -264,6 +263,16 @@ test.describe('Acceso denegado y errores visibles', () => {
   test('sin sesión, entrar a /panel redirige a iniciar sesión', async ({ page }) => {
     await page.goto('/panel');
     await expect(page).toHaveURL(/\/iniciar-sesion/);
+  });
+
+  test('después de iniciar sesión, vuelve a la página protegida que originó el acceso', async ({ page }) => {
+    await page.goto('/panel');
+    await expect(page).toHaveURL(/\/iniciar-sesion/);
+    await page.getByLabel('Correo electrónico').fill(VENDEDOR.email);
+    await page.getByLabel('Contraseña').fill(VENDEDOR.password);
+    await page.getByRole('button', { name: 'Ingresar' }).click();
+
+    await expect(page).toHaveURL('/panel');
   });
 
   test('credenciales incorrectas muestran un mensaje de error visible', async ({ page }) => {
