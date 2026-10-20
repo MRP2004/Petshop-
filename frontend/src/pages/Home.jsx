@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard.jsx';
-import ImagenProducto from '../components/ImagenProducto.jsx';
 import { EstadoCarga, EstadoError } from '../components/EstadosSolicitud.jsx';
 import useCargaDatos from '../hooks/useCargaDatos.js';
 import productosApi from '../api/productos.api.js';
@@ -9,16 +8,9 @@ import categoriasApi from '../api/categorias.api.js';
 import tiposMascotaApi from '../api/tiposMascota.api.js';
 import './Home.css';
 
-const formateador = new Intl.NumberFormat('es-AR', {
-  style: 'currency',
-  currency: 'ARS',
-});
-
 // Los productos de prueba no aparecen entre los destacados de la portada.
 const esPublicable = (producto) => !/prueba/i.test(producto.nombre);
 
-// Se priorizan los productos que ya tienen foto para las tarjetas del hero.
-const tieneImagen = (producto) => Boolean(producto.imagen?.url);
 const iconosMascota = {
   Perro: '🐶', Gato: '🐱', Ave: '🐦', 'Pequeños mamíferos': '🐹',
   Pez: '🐠', Reptil: '🐢',
@@ -32,12 +24,9 @@ const pedirInicio = () =>
   ]).then(
     ([resultado, categorias, mascotas]) => {
       const publicables = resultado.productos.filter(esPublicable);
-      const conFoto = publicables.filter(tieneImagen);
-      const sinFoto = publicables.filter((producto) => !tieneImagen(producto));
 
       return {
         productos: publicables.slice(0, 4),
-        productosHero: [...conFoto, ...sinFoto].slice(0, 2),
         categorias,
         mascotas,
       };
@@ -78,29 +67,6 @@ const Home = () => {
               src="/hero-mascotas.png"
               alt="Perro con camiseta número 10 junto a un gato"
             />
-
-            {(datos?.productosHero || []).map((producto, indice) => (
-              <Link
-                key={producto.idProducto}
-                to={`/productos/${producto.idProducto}`}
-                className={`home__hero-tarjeta home__hero-tarjeta--${indice}`}
-              >
-                <ImagenProducto
-                  producto={producto}
-                  claseContenedor="home__hero-tarjeta-imagen"
-                  claseImagen="home__hero-tarjeta-imagen-real"
-                />
-
-                <div>
-                  <p className="home__hero-tarjeta-nombre">
-                    {producto.nombre}
-                  </p>
-                  <p className="home__hero-tarjeta-precio">
-                    {formateador.format(Number(producto.precio))}
-                  </p>
-                </div>
-              </Link>
-            ))}
           </div>
         </div>
       </section>
