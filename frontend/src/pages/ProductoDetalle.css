@@ -44,9 +44,11 @@
 }
 
 .producto-detalle__precio {
-  font-size: 1.8rem;
-  font-weight: 700;
   margin: 12px 0 4px;
+}
+
+.producto-detalle__precio .precio-producto__actual {
+  font-size: 1.8rem;
 }
 
 .producto-detalle__stock {

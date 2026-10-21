@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   listar,
   listarCatalogo,
+  listarPreciosVigentes,
   listarMarcas,
   sugerencias,
   listarStockBajo,
@@ -32,6 +33,7 @@ const soloPersonalOTiendaPropia = [
 // puede navegar sin haber iniciado sesión.
 router.get('/', listar);
 router.get('/catalogo', listarCatalogo);
+router.get('/precios-vigentes', listarPreciosVigentes);
 router.get('/marcas', listarMarcas);
 // Antes de '/:id' a propósito (mismo motivo que /stock-bajo): si no, Express
 // interpretaría "sugerencias"/"stock-bajo" como un :id y nunca llegaría acá.

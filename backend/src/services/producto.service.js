@@ -20,6 +20,10 @@ import {
   limpiarCadenaOpcional,
 } from '../utils/validacion.js';
 import { esVendedorIndependiente } from '../utils/roles.js';
+import {
+  presentarProductosConPrecioVigente,
+  obtenerPreciosVigentesPorId,
+} from './precios/precioVigenteProducto.service.js';
 
 // Ronda 2, Etapa 8 (marketplace): solo `idTienda`/`nombre` — NUNCA
 // `numeroDocumento`/`razonSocial` (el CUIL/CUIT del vendedor no es un dato
@@ -432,12 +436,46 @@ const obtenerCatalogo = async (query) => {
   });
 
   return {
-    productos: rows,
+    productos: await presentarProductosConPrecioVigente(rows),
     total: count,
     pagina: filtros.pagina,
     totalPaginas: Math.ceil(count / filtros.limite),
     porPagina: filtros.limite,
   };
+};
+
+const obtenerPreciosVigentesCatalogo = async (query) => {
+  if (typeof query?.ids !== 'string' || !query.ids.trim()) {
+    throw new AppError('Indicá los IDs de producto para consultar sus precios', 400);
+  }
+
+  const idsCrudos = query.ids.split(',');
+  if (idsCrudos.length > 100) {
+    throw new AppError('No se pueden consultar más de 100 productos a la vez', 400);
+  }
+
+  const idsProducto = idsCrudos.map((id) =>
+    validarEnteroEnRango(id, 1, MAXIMO_ENTERO_POSITIVO, 'El ID del producto no es válido'),
+  );
+  if (new Set(idsProducto).size !== idsProducto.length) {
+    throw new AppError('La lista contiene IDs de producto repetidos', 400);
+  }
+
+  const productos = await Producto.findAll({
+    where: {
+      [Op.and]: [
+        { idProducto: { [Op.in]: idsProducto } },
+        SOLO_TIENDAS_NO_SUSPENDIDAS,
+      ],
+    },
+    include: relaciones,
+  });
+
+  if (productos.length !== idsProducto.length) {
+    throw new AppError('Uno o más productos no están disponibles', 404);
+  }
+
+  return obtenerPreciosVigentesPorId(productos);
 };
 
 const obtenerMarcasCatalogo = async () => {
@@ -594,6 +632,12 @@ const obtenerProductoPorId = async (id, { ocultarSiTiendaSuspendida = false } = 
   }
 
   return producto;
+};
+
+const obtenerProductoPublicoPorId = async (id) => {
+  const producto = await obtenerProductoPorId(id, { ocultarSiTiendaSuspendida: true });
+  const [productoPresentado] = await presentarProductosConPrecioVigente([producto]);
+  return productoPresentado;
 };
 
 // Corrección de una revisión posterior: producto e imagen se crean,
@@ -833,10 +877,12 @@ export {
   relaciones,
   obtenerProductos,
   obtenerCatalogo,
+  obtenerPreciosVigentesCatalogo,
   obtenerMarcasCatalogo,
   obtenerSugerenciasBusqueda,
   obtenerProductosConStockBajo,
   obtenerProductoPorId,
+  obtenerProductoPublicoPorId,
   crearProducto,
   actualizarProducto,
   eliminarProducto,

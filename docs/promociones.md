@@ -12,6 +12,10 @@
   Una promoción que termina el 10 y otra que empieza el 11 no se solapan.
 - La página pública muestra solo promociones vigentes. El panel administrativo
   muestra todas para permitir editar promociones futuras y vencidas.
+- El catálogo, el detalle de producto y el carrito muestran las promociones
+  vigentes con el precio de lista y el precio final con descuento. Los precios
+  del carrito se vuelven a consultar al abrirlo o cambiar sus productos; el
+  checkout siempre vuelve a cotizar antes de confirmar la compra.
 - La promoción reduce primero el precio unitario del producto. En una venta
   manual, el descuento manual (un importe en pesos) se resta después del
   subtotal ya reducido por promociones.
@@ -30,6 +34,12 @@ El descuento monetario se redondea al centavo más cercano, con los medios
 centavos hacia arriba. Por ejemplo, con precio de lista de `$10,00` y una
 promoción del `12,5%`, el descuento es `$1,25` y el precio final `$8,75`.
 Después se multiplica el precio final unitario por la cantidad.
+
+Las respuestas públicas del catálogo y del detalle incluyen `precioVigente`
+con el precio de lista, el descuento y el precio final expresados en centavos.
+El endpoint `GET /api/productos/precios-vigentes?ids=1,2` permite actualizar
+los precios visibles del carrito en una sola consulta. Estos importes son
+informativos: la cotización de checkout sigue siendo la fuente autoritativa.
 
 La confirmación del checkout vuelve a cotizar dentro de su transacción; el
 precio enviado por el navegador no es autoritativo. La venta manual también
