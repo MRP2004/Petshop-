@@ -22,6 +22,17 @@ const iniciarSesion = async (page, { email, password }) => {
   await page.waitForURL((url) => !url.pathname.includes('/iniciar-sesion'));
 };
 
+const iniciarSesionSinRecargar = async (page, { email, password }) => {
+  if (new URL(page.url()).pathname === '/iniciar-sesion') {
+    await page.getByRole('link', { name: /Volver a la tienda/ }).click();
+  }
+  await page.getByRole('link', { name: /Ingresar/ }).click();
+  await page.getByLabel('Correo electrónico').fill(email);
+  await page.getByLabel('Contraseña').fill(password);
+  await page.getByRole('button', { name: 'Ingresar' }).click();
+  await page.waitForURL((url) => !url.pathname.includes('/iniciar-sesion'));
+};
+
 test.describe('Caso de uso: registrar una venta y solicitar su cancelación (cliente + personal)', () => {
   test('iniciar sesión, buscar un producto, agregar al carrito, confirmar la compra, solicitar la cancelación y que el personal la apruebe', async ({ page }) => {
     await iniciarSesion(page, CLIENTE);
@@ -81,15 +92,17 @@ test.describe('Caso de uso: registrar una venta y solicitar su cancelación (cli
     await page.getByRole('menuitem', { name: 'Salir' }).click();
     const dialogoSalir = page.getByRole('alertdialog');
     await dialogoSalir.getByRole('button', { name: 'Salir' }).click();
-    // La ruta de compra está protegida: al cerrar sesión redirige a
-    // /iniciar-sesion, cuyo encabezado reducido no muestra "Ingresar".
-    await expect(page).toHaveURL(/\/iniciar-sesion/);
+    // Al confirmar el cierre, vuelve a la página principal del sitio.
+    await expect(page).toHaveURL('/');
 
     // El personal ve la solicitud pendiente y la aprueba (con confirmación
     // explícita — ver VentaDetalle.jsx): reutiliza la misma cancelación
     // transaccional que la cancelación directa.
 
-    await iniciarSesion(page, VENDEDOR);
+    await iniciarSesionSinRecargar(page, VENDEDOR);
+    // El diálogo de logout de la cuenta anterior no debe reaparecer al
+    // iniciar sesión con otra cuenta sin recargar la aplicación.
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Panel \(vendedor\)/i })).toBeVisible();
     await page.goto(`/panel/ventas/${idVenta}`);
     await expect(page.getByText(/Solicitud de cancelación pendiente de tu revisión/)).toBeVisible();
@@ -250,6 +263,16 @@ test.describe('Acceso denegado y errores visibles', () => {
   test('sin sesión, entrar a /panel redirige a iniciar sesión', async ({ page }) => {
     await page.goto('/panel');
     await expect(page).toHaveURL(/\/iniciar-sesion/);
+  });
+
+  test('después de iniciar sesión, vuelve a la página protegida que originó el acceso', async ({ page }) => {
+    await page.goto('/panel');
+    await expect(page).toHaveURL(/\/iniciar-sesion/);
+    await page.getByLabel('Correo electrónico').fill(VENDEDOR.email);
+    await page.getByLabel('Contraseña').fill(VENDEDOR.password);
+    await page.getByRole('button', { name: 'Ingresar' }).click();
+
+    await expect(page).toHaveURL('/panel');
   });
 
   test('credenciales incorrectas muestran un mensaje de error visible', async ({ page }) => {

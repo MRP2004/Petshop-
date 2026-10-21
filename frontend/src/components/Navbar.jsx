@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 import { useCarrito } from '../hooks/useCarrito.js';
 import useCargaDatos from '../hooks/useCargaDatos.js';
@@ -24,8 +24,11 @@ const Navbar = () => {
   // Ronda 2: "Salir" ya no cierra la sesión directamente al hacer clic —
   // primero pide confirmación (ver docs/frontend-diseno.md, "Menú de
   // cuenta"). null-safe: solo importa mientras estaAutenticado es true.
-  const [mostrarConfirmacionSalir, setMostrarConfirmacionSalir] = useState(false);
+  // La confirmación pertenece a la sesión que la abrió; un cambio de cuenta
+  // no debe hacer reaparecer el diálogo anterior.
+  const [usuarioConfirmacionSalir, setUsuarioConfirmacionSalir] = useState(null);
   const ubicacion = useLocation();
+  const navegar = useNavigate();
   const { usuario, estaAutenticado, esPersonal, esVendedorIndependiente, cerrarSesion, cerrandoSesion, errorCierreSesion } = useAuth();
   const { carrito } = useCarrito();
 
@@ -54,17 +57,17 @@ const Navbar = () => {
       etiqueta: categoria.nombre,
     }));
 
-  const confirmarSalir = () => {
-    // No hace falta cerrar el diálogo a mano en el caso exitoso: al salir,
-    // estaAutenticado pasa a false y todo este subárbol (incluido el
-    // diálogo) deja de renderizarse. Si falla, errorCierreSesion queda
-    // seteado y el diálogo sigue abierto mostrando el motivo (ver más abajo).
-    cerrarSesion();
+  const confirmarSalir = async () => {
+    const cierreConfirmado = await cerrarSesion();
+    if (cierreConfirmado) {
+      setUsuarioConfirmacionSalir(null);
+      navegar('/', { replace: true });
+    }
   };
 
   const cerrarConfirmacionSalir = () => {
     if (cerrandoSesion) return; // no se puede abortar un cierre ya en vuelo
-    setMostrarConfirmacionSalir(false);
+    setUsuarioConfirmacionSalir(null);
   };
 
   if (encabezadoReducido) {
@@ -131,7 +134,7 @@ const Navbar = () => {
                         { to: '/mis-favoritos', etiqueta: 'Mis favoritos' },
                       ]
               }
-              onPedirSalir={() => setMostrarConfirmacionSalir(true)}
+              onPedirSalir={() => setUsuarioConfirmacionSalir(usuario)}
             />
           ) : (
             <Link to="/iniciar-sesion" className="navbar__accion">
@@ -220,7 +223,7 @@ const Navbar = () => {
 
       {estaAutenticado && (
         <ConfirmDialog
-          abierto={mostrarConfirmacionSalir}
+          abierto={usuarioConfirmacionSalir === usuario}
           titulo="¿Querés cerrar sesión?"
           mensaje="Vas a salir de tu cuenta en este dispositivo."
           textoConfirmar="Salir"
