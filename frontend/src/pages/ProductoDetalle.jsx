@@ -6,9 +6,8 @@ import useCargaDatos from '../hooks/useCargaDatos.js';
 import productosApi from '../api/productos.api.js';
 import ImagenProducto from '../components/ImagenProducto.jsx';
 import BotonFavorito from '../components/BotonFavorito.jsx';
+import PrecioProducto from '../components/PrecioProducto.jsx';
 import './ProductoDetalle.css';
-
-const formateador = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' });
 
 // Detalle de producto: precio, disponibilidad, sus relaciones (categoría,
 // tipo de mascota, proveedor) y selección de cantidad para agregar al
@@ -58,7 +57,11 @@ const ProductoDetalleContenido = ({ id }) => {
         )}
         {producto.descripcion && <p className="producto-detalle__descripcion">{producto.descripcion}</p>}
 
-        <p className="producto-detalle__precio">{formateador.format(Number(producto.precio))}</p>
+        <PrecioProducto
+          className="producto-detalle__precio"
+          precioLista={producto.precio}
+          precioVigente={producto.precioVigente}
+        />
         <p className={sinStock ? 'producto-detalle__stock--agotado' : 'producto-detalle__stock'}>
           {sinStock ? 'Sin stock disponible' : `Stock disponible: ${producto.stockActual} unidades`}
         </p>

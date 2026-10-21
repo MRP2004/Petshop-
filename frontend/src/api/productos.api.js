@@ -21,6 +21,21 @@ const buscarCatalogo = (filtros = {}) => {
   return solicitar(`/productos/catalogo?${parametros.toString()}`);
 };
 
+const preciosVigentes = async (idsProducto) => {
+  const grupos = [];
+  for (let indice = 0; indice < idsProducto.length; indice += 100) {
+    grupos.push(idsProducto.slice(indice, indice + 100));
+  }
+
+  const resultados = await Promise.all(
+    grupos.map((ids) => {
+      const parametros = new URLSearchParams({ ids: ids.join(',') });
+      return solicitar(`/productos/precios-vigentes?${parametros.toString()}`);
+    }),
+  );
+  return resultados.flat();
+};
+
 const listarMarcas = () => solicitar('/productos/marcas');
 
 const listarStockBajo = () => solicitar('/productos/stock-bajo');
@@ -36,6 +51,7 @@ export default {
   ...base,
   listarFiltrado,
   buscarCatalogo,
+  preciosVigentes,
   listarMarcas,
   listarStockBajo,
   ajustarStock,
