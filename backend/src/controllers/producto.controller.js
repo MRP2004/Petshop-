@@ -1,10 +1,11 @@
 import {
   obtenerProductos,
   obtenerCatalogo,
+  obtenerPreciosVigentesCatalogo,
   obtenerMarcasCatalogo,
   obtenerSugerenciasBusqueda,
   obtenerProductosConStockBajo,
-  obtenerProductoPorId,
+  obtenerProductoPublicoPorId,
   crearProducto,
   actualizarProducto,
   eliminarProducto,
@@ -23,6 +24,14 @@ const listar = async (req, res, next) => {
 const listarCatalogo = async (req, res, next) => {
   try {
     res.status(200).json(await obtenerCatalogo(req.query));
+  } catch (error) {
+    next(error);
+  }
+};
+
+const listarPreciosVigentes = async (req, res, next) => {
+  try {
+    res.status(200).json(await obtenerPreciosVigentesCatalogo(req.query));
   } catch (error) {
     next(error);
   }
@@ -59,7 +68,7 @@ const buscarPorId = async (req, res, next) => {
     // Ruta pública (ver producto.routes.js): un producto de una tienda
     // suspendida no debe verse ni por link directo — ver
     // producto.service.js#obtenerProductoPorId.
-    const producto = await obtenerProductoPorId(req.params.id, { ocultarSiTiendaSuspendida: true });
+    const producto = await obtenerProductoPublicoPorId(req.params.id);
     res.status(200).json(producto);
   } catch (error) {
     next(error);
@@ -115,6 +124,7 @@ const ajustarStock = async (req, res, next) => {
 export {
   listar,
   listarCatalogo,
+  listarPreciosVigentes,
   listarMarcas,
   sugerencias,
   listarStockBajo,

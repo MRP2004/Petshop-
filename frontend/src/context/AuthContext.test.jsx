@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import userEvent from '@testing-library/user-event';
 import { AuthProvider } from './AuthContext.jsx';
 import { useAuth } from '../hooks/useAuth.js';
@@ -23,14 +24,20 @@ vi.mock('../api/auth.api.js', () => ({
 
 const PanelDePrueba = () => {
   const { estaAutenticado, cargandoSesion, cerrarSesion, cerrandoSesion, errorCierreSesion } = useAuth();
+  const [resultadoCierre, setResultadoCierre] = useState(null);
 
   if (cargandoSesion) return <span>cargando</span>;
 
   return (
     <div>
       <span data-testid="estado">{estaAutenticado ? 'autenticado' : 'anonimo'}</span>
+      <span data-testid="resultado-cierre">{String(resultadoCierre)}</span>
       {errorCierreSesion && <span data-testid="error-logout">{errorCierreSesion}</span>}
-      <button type="button" onClick={cerrarSesion} disabled={cerrandoSesion}>
+      <button
+        type="button"
+        onClick={async () => setResultadoCierre(await cerrarSesion())}
+        disabled={cerrandoSesion}
+      >
         Cerrar sesión
       </button>
     </div>
@@ -60,6 +67,7 @@ describe('AuthContext - cerrarSesion', () => {
     await usuario.click(screen.getByText('Cerrar sesión'));
 
     await waitFor(() => expect(screen.getByTestId('estado').textContent).toBe('anonimo'));
+    expect(screen.getByTestId('resultado-cierre').textContent).toBe('true');
     expect(screen.queryByTestId('error-logout')).not.toBeInTheDocument();
   });
 
@@ -80,6 +88,7 @@ describe('AuthContext - cerrarSesion', () => {
       expect(screen.getByTestId('error-logout').textContent).toMatch(/revisá tu conexión/i),
     );
     expect(screen.getByTestId('estado').textContent).toBe('autenticado');
+    expect(screen.getByTestId('resultado-cierre').textContent).toBe('false');
   });
 
   it('reintento exitoso: después de un fallo, un segundo clic que sí responde bien limpia la sesión', async () => {
@@ -97,6 +106,7 @@ describe('AuthContext - cerrarSesion', () => {
     await usuario.click(screen.getByText('Cerrar sesión'));
 
     await waitFor(() => expect(screen.getByTestId('estado').textContent).toBe('anonimo'));
+    expect(screen.getByTestId('resultado-cierre').textContent).toBe('true');
     expect(screen.queryByTestId('error-logout')).not.toBeInTheDocument();
     expect(authApi.cerrarSesion).toHaveBeenCalledTimes(2);
   });
@@ -111,6 +121,7 @@ describe('AuthContext - cerrarSesion', () => {
     await usuario.click(screen.getByText('Cerrar sesión'));
 
     await waitFor(() => expect(screen.getByTestId('estado').textContent).toBe('anonimo'));
+    expect(screen.getByTestId('resultado-cierre').textContent).toBe('true');
     expect(screen.queryByTestId('error-logout')).not.toBeInTheDocument();
   });
 

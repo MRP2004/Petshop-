@@ -116,6 +116,37 @@ test('el listado público devuelve solo promociones vigentes; el listado de gest
   assert.equal(gestion.body.length, 2);
 });
 
+test('el catálogo, el detalle y la consulta múltiple muestran el precio promocional vigente', async () => {
+  const producto = await crearProductoDePrueba({
+    nombre: 'Alimento promocionado',
+    precio: '1000.00',
+  });
+  const hoy = obtenerFechaArgentina();
+  await promocionPara(producto, hoy, hoy, 15);
+
+  const catalogo = await request(app)
+    .get('/api/productos/catalogo?buscar=Alimento%20promocionado')
+    .expect(200);
+  const productoCatalogo = catalogo.body.productos[0];
+  assert.equal(productoCatalogo.precioVigente.idPromocionProducto > 0, true);
+  assert.equal(productoCatalogo.precioVigente.porcentajeDescuento, 15);
+  assert.equal(productoCatalogo.precioVigente.precioListaCentavos, 100000);
+  assert.equal(productoCatalogo.precioVigente.precioFinalCentavos, 85000);
+
+  const detalle = await request(app)
+    .get(`/api/productos/${producto.idProducto}`)
+    .expect(200);
+  assert.equal(detalle.body.precioVigente.precioFinalCentavos, 85000);
+
+  const precios = await request(app)
+    .get(`/api/productos/precios-vigentes?ids=${producto.idProducto}`)
+    .expect(200);
+  assert.deepEqual(precios.body, [{
+    idProducto: producto.idProducto,
+    precioVigente: productoCatalogo.precioVigente,
+  }]);
+});
+
 test('las promociones públicas ocultan tiendas suspendidas y gestión las conserva', async () => {
   const activa = await crearVendedorIndependienteDePrueba();
   const suspendida = await crearVendedorIndependienteDePrueba({ tienda: { estado: 'suspendida' } });

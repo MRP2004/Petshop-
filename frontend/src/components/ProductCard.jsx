@@ -2,9 +2,8 @@ import { Link } from 'react-router-dom';
 import { useCarrito } from '../hooks/useCarrito.js';
 import ImagenProducto from './ImagenProducto.jsx';
 import BotonFavorito from './BotonFavorito.jsx';
+import PrecioProducto from './PrecioProducto.jsx';
 import './ProductCard.css';
-
-const formateador = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' });
 
 // Reescrita a partir del boceto de InicioFront: mismo layout de tarjeta,
 // ahora con datos reales del backend (nombre, precio, disponibilidad) y
@@ -45,7 +44,11 @@ const ProductCard = ({ producto }) => {
         </div>
 
         <h3 className="product-card__nombre">{producto.nombre}</h3>
-        <p className="product-card__precio">{formateador.format(Number(producto.precio))}</p>
+        <PrecioProducto
+          className="product-card__precio"
+          precioLista={producto.precio}
+          precioVigente={producto.precioVigente}
+        />
         <p className={`product-card__stock ${sinStock ? 'product-card__stock--agotado' : ''}`}>
           {sinStock ? 'Sin stock' : `Disponible (${producto.stockActual})`}
         </p>

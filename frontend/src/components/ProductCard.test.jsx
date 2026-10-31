@@ -64,6 +64,23 @@ describe('ProductCard', () => {
     expect(screen.getByText(/Disponible \(10\)/)).toBeInTheDocument();
   });
 
+  it('muestra precio de lista y descuento vigente cuando el producto está en promoción', async () => {
+    renderizar({
+      ...producto,
+      precioVigente: {
+        idPromocionProducto: 3,
+        porcentajeDescuento: 15,
+        precioListaCentavos: 2599900,
+        precioFinalCentavos: 2209915,
+      },
+    });
+    await screen.findByRole('button', { name: /favoritos/i });
+
+    expect(screen.getByText('15% OFF')).toBeInTheDocument();
+    expect(screen.getByText(/25\.999/).tagName).toBe('DEL');
+    expect(screen.getByText(/22\.099/)).toBeInTheDocument();
+  });
+
   it('al hacer click en "Agregar al carrito" suma un item al carrito (evento de usuario + reactividad)', async () => {
     renderizar(producto);
 

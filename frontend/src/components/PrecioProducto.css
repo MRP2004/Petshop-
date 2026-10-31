@@ -1,0 +1,28 @@
+.precio-producto {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.precio-producto__etiqueta {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: var(--radio-pildora);
+  background: var(--color-acento-suave);
+  color: var(--color-acento-oscuro);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.precio-producto__anterior {
+  color: var(--color-texto-suave);
+  font-size: 0.82rem;
+}
+
+.precio-producto__actual {
+  color: var(--color-marca-oscuro);
+  font-size: 1.15rem;
+  font-weight: 800;
+}

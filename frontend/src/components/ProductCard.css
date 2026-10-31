@@ -79,10 +79,11 @@
 }
 
 .product-card__precio {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: var(--color-marca-oscuro);
   margin: 0 0 4px;
+}
+
+.product-card__precio .precio-producto__actual {
+  font-size: 1.2rem;
 }
 
 .product-card__stock {

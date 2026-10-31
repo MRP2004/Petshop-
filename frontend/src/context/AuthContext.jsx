@@ -68,9 +68,9 @@ const AuthProvider = ({ children }) => {
   // inválida la sesión (401: no hay nada que cerrar). Cualquier otro fallo
   // (de red, o un error del servidor) deja la sesión como estaba y expone
   // un mensaje para que la interfaz lo muestre y permita reintentar
-  // (ver Navbar.jsx). `cerrarSesion` nunca relanza el error: todo el
-  // resultado queda en `errorCierreSesion`, así que no hay ningún rechazo
-  // de promesa sin atrapar en quien la llama.
+  // (ver Navbar.jsx). `cerrarSesion` nunca relanza el error y devuelve si el
+  // servidor confirmó el cierre (o ya no reconocía la sesión), así que la
+  // navegación solo ocurre cuando realmente corresponde.
   const cerrarSesion = useCallback(async () => {
     setCerrandoSesion(true);
     setErrorCierreSesion(null);
@@ -78,17 +78,20 @@ const AuthProvider = ({ children }) => {
     try {
       await authApi.cerrarSesion();
       setUsuario(null);
+      return true;
     } catch (error) {
       if (error.status === 401) {
         // El backend ya no reconoce la sesión (cookie vencida o borrada):
         // no hay nada que confirmar, se trata igual que un cierre exitoso.
         setUsuario(null);
+        return true;
       } else {
         setErrorCierreSesion(
           error.status === 0
             ? 'No se pudo confirmar el cierre de sesión: revisá tu conexión e intentá de nuevo.'
             : 'No se pudo cerrar la sesión. Intentá de nuevo.',
         );
+        return false;
       }
     } finally {
       setCerrandoSesion(false);
