@@ -47,7 +47,7 @@ const startServer = async () => {
     await sequelize.sync();
     console.log('Modelos sincronizados con la base de datos');
 
-    const servidor = app.listen(PORT, () => {
+    const servidor = app.listen(PORT, '0.0.0.0', () => {
       console.log(`API Petshop (${ENTORNO}) ejecutándose en http://localhost:${PORT}`);
     });
 

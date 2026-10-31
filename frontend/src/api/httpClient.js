@@ -4,7 +4,7 @@
 // en ninguna variable de JS: el navegador la adjunta solo) y la traducción
 // de errores del backend ({ error: "..." }) a una excepción con mensaje
 // legible.
-const URL_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const URL_BASE = import.meta.env.VITE_API_URL || '/api';
 
 // Corrección (revisión independiente): el backend le agrega un sufijo al
 // nombre de sus cookies según `ENTORNO` (ver backend/src/utils/sesion.js:

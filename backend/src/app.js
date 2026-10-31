@@ -2,7 +2,8 @@ import express from 'express';
 import cors from 'cors';
 
 import sequelize from './config/database.js';
-
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import tipoMascotaRoutes from './routes/tipoMascota.routes.js';
 import categoriaRoutes from './routes/categoria.routes.js';
 import proveedorRoutes from './routes/proveedor.routes.js';
@@ -27,6 +28,11 @@ import {
 } from './middlewares/error.middleware.js';
 
 const app = express();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const frontendDist = path.resolve(__dirname, '../../frontend/dist');
 
 // credentials:true es necesario para que el navegador mande/reciba las
 // cookies de sesión (ver docs/backend-autenticacion.md) en pedidos
@@ -134,6 +140,21 @@ app.use('/api/avisos', avisoRoutes);
 app.use('/api/solicitudes-vendedor', solicitudVendedorRoutes);
 app.use('/api/tiendas', tiendaRoutes);
 app.use('/api/carrito', carritoRoutes);
+
+// Servir los archivos compilados del frontend (React + Vite).
+app.use(express.static(frontendDist));
+
+// Para las rutas administradas por React Router,
+// entregar index.html y permitir que React muestre la página correspondiente.
+app.get(/^(?!\/api(?:\/|$)).*/, (req, res, next) => {
+  if (!req.accepts('html')) {
+    return next();
+  }
+
+  res.sendFile(path.join(frontendDist, 'index.html'), (error) => {
+    if (error) next(error);
+  });
+});
 
 app.use(rutaNoEncontrada);
 app.use(manejarErrores);
