@@ -1,5 +1,6 @@
 node_modules/
+dist/
 .env
-.env.test
-.env.e2e
-.env.catalogo
+.env.*
+!.env.example
+!.env.*.example
