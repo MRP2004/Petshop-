@@ -189,72 +189,81 @@ const CheckoutInterno = ({ usuario, direccionGuardada }) => {
   const direccionInvalida = esEnvioADomicilio && direccionEntrega.trim().length < LONGITUD_MINIMA_DIRECCION;
 
   const confirmarCompra = async (evento) => {
-    evento.preventDefault();
-    if (enviando || direccionInvalida || !cotizacion) return;
+  evento.preventDefault();
+  if (enviando || direccionInvalida || !cotizacion) return;
 
-    if (tipoPago === 'debito') {
-      const errores = validarCamposDebito(datosDebito);
-      setErroresDebito(errores);
-      if (Object.keys(errores).length > 0) return;
-    }
+  if (tipoPago === 'debito') {
+    const errores = validarCamposDebito(datosDebito);
+    setErroresDebito(errores);
+    if (Object.keys(errores).length > 0) return;
+  }
 
-    setEnviando(true);
-    setErrorEnvio(null);
-    setAvisoCotizacionActualizada(false);
-    setResultadoRechazo(null);
+  setEnviando(true);
+  setErrorEnvio(null);
+  setAvisoCotizacionActualizada(false);
+  setResultadoRechazo(null);
 
-    const detalles = carrito.aDetallesVenta();
-    const entrega = {
-      metodoEntrega,
-      direccionEntrega: esEnvioADomicilio ? direccionEntrega.trim() : undefined,
-    };
-
-    try {
-      // Éxito (201): el cuerpo es directamente la Venta ya confirmada —
-      // ver compra.controller.js. Un rechazo simulado (402) o un conflicto
-      // (409) llegan como error, no como respuesta exitosa (manejados
-      // abajo, en el catch).
-      const venta = await comprasApi.confirmar({
-        claveIdempotencia: obtenerOCrearClave(usuario.idCliente, detalles, entrega),
-        detalles,
-        ...entrega,
-        tipoPagoSimulado: tipoPago,
-        datosDebito: tipoPago === 'debito' ? datosDebito : undefined,
-        cotizacionAceptada: cotizacion,
-      });
-
-      limpiarClave();
-      vaciarCarrito();
-      navegar(`/mis-compras/${venta.idVenta}`, { replace: true, state: { reciénConfirmada: true } });
-    } catch (error) {
-      if (error.status === 402) {
-        // Rechazo simulado (compra.controller.js): no hay compra que
-        // mostrar. Se limpia la clave — un reintento (con otra tarjeta,
-        // seguramente) es un intento nuevo, no una repetición del mismo
-        // (ver utils/claveIdempotencia.js).
-        limpiarClave();
-        setResultadoRechazo(error.datos?.motivoRechazo || error.message);
-        setEnviando(false);
-        return;
-      }
-
-      if (error.status === 409 && error.datos?.codigo === 'COTIZACION_DESACTUALIZADA') {
-        // El backend ya revirtió todo: la MISMA clave sigue siendo válida
-        // para reintentar con esta cotización nueva (ver
-        // utils/claveIdempotencia.js).
-        setCotizacion(error.datos.cotizacionVigente);
-        setAvisoCotizacionActualizada(true);
-        setEnviando(false);
-        return;
-      }
-
-      // Errores esperables acá: stock insuficiente (cambió desde que se
-      // cotizó) o la clave ya usada con otro contenido; se muestran tal
-      // cual los devuelve el backend, que es la fuente de verdad.
-      setErrorEnvio(error.message);
-      setEnviando(false);
-    }
+  const detalles = carrito.aDetallesVenta();
+  const entrega = {
+    metodoEntrega,
+    direccionEntrega: esEnvioADomicilio ? direccionEntrega.trim() : undefined,
   };
+
+  const datosCompra = {
+    claveIdempotencia: obtenerOCrearClave(usuario.idCliente, detalles, entrega),
+    detalles,
+    ...entrega,
+    cotizacionAceptada: cotizacion,
+  };
+
+  try {
+    // Mercado Pago: inicia un checkout externo.
+    if (tipoPago === 'mercado_pago') {
+      const resultado = await comprasApi.iniciarMercadoPago(datosCompra);
+
+      if (!resultado.initPoint) {
+        throw new Error('El servidor no devolvió el enlace de pago de Mercado Pago.');
+      }
+
+      // No vaciamos el carrito ni borramos la clave:
+      // el pago todavía no está confirmado.
+      window.location.assign(resultado.initPoint);
+      return;
+    }
+
+    // Transferencia y Débito: mantienen el flujo simulado actual.
+    const venta = await comprasApi.confirmar({
+      ...datosCompra,
+      tipoPagoSimulado: tipoPago,
+      datosDebito: tipoPago === 'debito' ? datosDebito : undefined,
+    });
+
+    limpiarClave();
+    vaciarCarrito();
+    navegar(`/mis-compras/${venta.idVenta}`, {
+      replace: true,
+      state: { reciénConfirmada: true },
+    });
+
+  } catch (error) {
+    if (error.status === 402) {
+      limpiarClave();
+      setResultadoRechazo(error.datos?.motivoRechazo || error.message);
+      setEnviando(false);
+      return;
+    }
+
+    if (error.status === 409 && error.datos?.codigo === 'COTIZACION_DESACTUALIZADA') {
+      setCotizacion(error.datos.cotizacionVigente);
+      setAvisoCotizacionActualizada(true);
+      setEnviando(false);
+      return;
+    }
+
+    setErrorEnvio(error.message);
+    setEnviando(false);
+  }
+};
 
   if (cargando) return <div className="pagina contenedor"><EstadoCarga mensaje="Verificando tu compra…" /></div>;
   // P. ej. un producto que dejó de estar disponible (tienda suspendida): el
@@ -344,7 +353,7 @@ const CheckoutInterno = ({ usuario, direccionGuardada }) => {
         )}
 
         <fieldset className="checkout__pago">
-          <legend>Pago simulado — sin validez fiscal, no se procesa ningún pago real</legend>
+          <legend>Medio de pago</legend>
 
           <label className="checkout__opcion-pago">
             <input
@@ -366,6 +375,17 @@ const CheckoutInterno = ({ usuario, direccionGuardada }) => {
               onChange={() => setTipoPago('debito')}
             />
             Débito (simulado)
+          </label>
+          
+          <label className="checkout__opcion-pago">
+            <input
+              type="radio"
+              name="tipoPago"
+              value="mercado_pago"
+              checked={tipoPago === 'mercado_pago'}
+              onChange={() => setTipoPago('mercado_pago')}
+            />
+            Mercado Pago
           </label>
 
           {tipoPago === 'debito' && (

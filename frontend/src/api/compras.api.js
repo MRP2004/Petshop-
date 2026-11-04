@@ -8,10 +8,14 @@ const cotizar = (detalles) =>
 
 const confirmar = (datos) => solicitar('/compras', { metodo: 'POST', cuerpo: datos });
 
+// Inicia un checkout con Mercado Pago.
+const iniciarMercadoPago = (datos) =>
+  solicitar('/compras/mercado-pago', { metodo: 'POST', cuerpo: datos });
+
 // Recuperación tras perder la respuesta (CU-04, §1): consulta de solo
 // lectura del resultado de un intento propio — ver
 // backend/src/services/compra.service.js#consultarIntento.
 const consultarIntento = (clave) =>
   solicitar(`/compras/intentos/${encodeURIComponent(clave)}`, { metodo: 'GET' });
 
-export default { cotizar, confirmar, consultarIntento };
+export default { cotizar, confirmar, consultarIntento, iniciarMercadoPago };

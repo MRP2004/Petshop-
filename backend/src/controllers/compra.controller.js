@@ -1,5 +1,14 @@
-import { cotizar, aRespuestaPublica } from '../services/cotizacion.service.js';
-import { confirmarCompra, consultarIntento } from '../services/compra.service.js';
+import {
+  cotizar,
+  aRespuestaPublica,
+} from '../services/cotizacion.service.js';
+
+import {
+  confirmarCompra,
+  consultarIntento,
+  iniciarCheckoutMercadoPago,
+  procesarWebhookMercadoPago,
+} from '../services/compra.service.js';
 
 const obtenerCotizacion = async (req, res, next) => {
   try {
@@ -54,4 +63,28 @@ const consultarIntentoPorClave = async (req, res, next) => {
   }
 };
 
-export { obtenerCotizacion, confirmar, consultarIntentoPorClave };
+const iniciarMercadoPago = async (req, res, next) => {
+  try {
+    const resultado = await iniciarCheckoutMercadoPago(req.body, req.usuario);
+    res.status(201).json(resultado);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const recibirWebhookMercadoPago = async (req, res, next) => {
+  try {
+    await procesarWebhookMercadoPago(req);
+    res.sendStatus(200);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export {
+  obtenerCotizacion,
+  confirmar,
+  consultarIntentoPorClave,
+  iniciarMercadoPago,
+  recibirWebhookMercadoPago,
+};

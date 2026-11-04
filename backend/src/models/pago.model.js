@@ -1,16 +1,8 @@
+
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
 import Venta from './venta.model.js';
 
-// Pago simulado del checkout de cliente (CU-04). Igual que
-// direccionEntrega.model.js/imagenProducto.model.js: tabla NUEVA con la
-// venta como clave primaria (relación 1 a 1), no una columna agregada a
-// `venta` — sync() crea tablas nuevas sin tocar las existentes, agregar una
-// columna a `venta` sí habría requerido una migración manual (ver
-// docs/backend-base-de-datos.md). Solo existe cuando la venta se originó en
-// el checkout con pago simulado: una venta cargada manualmente por el
-// personal (venta.service.js#registrarVenta) no tiene fila acá, y así debe
-// mostrarse (sin inventar un "aprobado_simulado" que nunca ocurrió).
 const Pago = sequelize.define(
   'Pago',
   {
@@ -19,32 +11,29 @@ const Pago = sequelize.define(
       primaryKey: true,
     },
 
-    // 'transferencia' y 'debito' son los únicos dos medios simulados de esta
-    // etapa (ver pagoSimulado.service.js). No hay pasarela real: ninguno de
-    // los dos mueve dinero de verdad.
+    // Medio utilizado para realizar el pago.
     tipo: {
-      type: DataTypes.ENUM('transferencia', 'debito'),
+      type: DataTypes.ENUM(
+        'transferencia',
+        'debito',
+        'mercado_pago',
+      ),
       allowNull: false,
     },
 
-    // Estado del PAGO, separado del estado del PEDIDO (Venta.estado): un
-    // pago rechazado nunca llega a crear una Venta (ver compra.service.js),
-    // así que en la práctica esta columna solo toma 'aprobado_simulado' (al
-    // confirmar) o 'revertido_simulado' (al cancelar la venta). El valor
-    // 'rechazado_simulado' se registra en IntentoCompra, no acá.
+    // Los pagos simulados conservan sus estados originales.
+    // Mercado Pago utiliza 'aprobado' cuando la operación
+    // fue verificada directamente contra su API.
     estado: {
       type: DataTypes.ENUM(
         'aprobado_simulado',
         'rechazado_simulado',
         'revertido_simulado',
+        'aprobado',
       ),
       allowNull: false,
     },
 
-    // Últimos 4 dígitos y marca SOLO para mostrar en el comprobante ("Débito
-    // terminada en 0002"); nunca el número completo ni el código de
-    // seguridad, que ni siquiera llegan a esta capa (ver
-    // pagoSimulado.service.js). Null para transferencia (no aplica).
     ultimosCuatroDigitos: {
       type: DataTypes.STRING(4),
       allowNull: true,
@@ -52,6 +41,13 @@ const Pago = sequelize.define(
 
     marca: {
       type: DataTypes.STRING(30),
+      allowNull: true,
+    },
+
+    // Identificador de la operación en Mercado Pago.
+    // Es null para los pagos simulados.
+    idPagoMercadoPago: {
+      type: DataTypes.STRING(100),
       allowNull: true,
     },
 

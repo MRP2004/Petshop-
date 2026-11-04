@@ -23,6 +23,12 @@ import { obtenerVentaPorId } from './venta.service.js';
 import { enviarComprobantePorCorreo } from './correo.service.js';
 import { crearAviso, notificarTiendasParticipantes, TIPOS_AVISO } from './aviso.service.js';
 import { esCompradorRegistrado } from '../utils/roles.js';
+import {
+  crearPreferencia,
+  consultarPago,
+  validarFirmaWebhook,
+} from './mercadoPago.service.js';
+import Usuario from '../models/usuario.model.js';
 
 // Una cotización aceptada hace más de esto se considera vencida y exige
 // pedir una nueva, aunque los precios no hayan cambiado (ver CU-04, §4:
@@ -162,6 +168,364 @@ const esErrorDeContencionTransitoria = (error) =>
 // promoción vigente/vencida sin depender de las reglas reales de José, que
 // todavía no existen. El body de la solicitud HTTP nunca puede llegar a
 // pisarlo (el controller no lo reenvía) — no es un campo del cuerpo.
+
+const registrarCompraAprobada = async ({
+  transaction,
+  cliente,
+  usuario,
+  idCliente,
+  metodoEntrega,
+  direccionEntrega,
+  cotizacionRecalculada,
+  medioPago,
+  intento,
+  datosPago,
+}) => {
+  const venta = await Venta.create(
+    {
+      fecha: new Date(),
+      total: (cotizacionRecalculada.totalCentavos / 100).toFixed(2),
+      estado: 'registrada',
+      metodoEntrega,
+      idCliente,
+      idMedioPago: medioPago.idMedioPago,
+    },
+    { transaction },
+  );
+
+  await crearAviso(
+    {
+      idUsuario: usuario.idUsuario,
+      tipo: TIPOS_AVISO.COMPRA_CONFIRMADA,
+      mensaje: `Tu compra #${venta.idVenta} fue confirmada.`,
+      enlace: `/mis-compras/${venta.idVenta}`,
+    },
+    transaction,
+  );
+
+  await notificarTiendasParticipantes(
+    {
+      idVenta: venta.idVenta,
+      tiendasPorId: cotizacionRecalculada.tiendasPorId,
+    },
+    transaction,
+  );
+
+  if (direccionEntrega) {
+    await DireccionEntrega.create(
+      { idVenta: venta.idVenta, direccion: direccionEntrega },
+      { transaction },
+    );
+  }
+
+  for (const linea of cotizacionRecalculada.lineas) {
+    const subtotalCentavos = calcularSubtotalCentavos(
+      linea.precioFinalCentavos,
+      linea.cantidad,
+      `El subtotal del producto ${linea.nombre} no puede calcularse de forma segura`,
+      `El subtotal del producto ${linea.nombre} supera el máximo permitido`,
+    );
+
+    const detalleVenta = await DetalleVenta.create(
+      {
+        cantidad: linea.cantidad,
+        precioUnitario: (linea.precioFinalCentavos / 100).toFixed(2),
+        subtotal: (subtotalCentavos / 100).toFixed(2),
+        idVenta: venta.idVenta,
+        idProducto: linea.idProducto,
+      },
+      { transaction },
+    );
+
+    await DetalleVentaPromocion.create(
+      {
+        idDetalleVenta: detalleVenta.idDetalleVenta,
+        nombreProductoHistorico: linea.nombre,
+        precioListaUnitario: (linea.precioListaCentavos / 100).toFixed(2),
+        idPromocionProducto: linea.idPromocionProducto,
+        porcentajeDescuento: linea.porcentajeDescuento,
+        montoDescuentoUnitario: (linea.montoDescuentoCentavos / 100).toFixed(2),
+      },
+      { transaction },
+    );
+
+    await linea.producto.update(
+      { stockActual: linea.producto.stockActual - linea.cantidad },
+      { transaction },
+    );
+  }
+
+  await Comprobante.create(
+    {
+      idVenta: venta.idVenta,
+      numero: generarNumeroComprobante(venta.idVenta),
+      estadoCorreo: cliente.email ? 'pendiente' : 'no_aplica',
+      nombreCompradorHistorico: cliente.nombre,
+      apellidoCompradorHistorico: cliente.apellido,
+      correoCompradorHistorico: cliente.email,
+    },
+    { transaction },
+  );
+
+  await Pago.create(
+    {
+      idVenta: venta.idVenta,
+      tipo: datosPago.tipo,
+      estado: datosPago.estado,
+      ultimosCuatroDigitos: datosPago.ultimosCuatroDigitos ?? null,
+      marca: datosPago.marca ?? null,
+      monto: (cotizacionRecalculada.totalCentavos / 100).toFixed(2),
+      idPagoMercadoPago: datosPago.idPagoMercadoPago ?? null,
+    },
+    { transaction },
+  );
+
+  await vaciarCarritoEnTransaccion(usuario.idUsuario, transaction);
+
+  await IntentoCompra.update(
+    {
+      estado: 'aprobado',
+      idVenta: venta.idVenta,
+      actualizadoEn: new Date(),
+    },
+    {
+      where: { idIntentoCompra: intento.idIntentoCompra },
+      transaction,
+    },
+  );
+
+  return {
+    tipo: 'aprobado',
+    idVenta: venta.idVenta,
+    reintento: false,
+  };
+};
+
+const resolverMedioPagoMercadoPago = async (transaction) => {
+  const medioPago = await MedioPago.findOne({
+    where: { nombre: 'Mercado Pago' },
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+
+  if (!medioPago) {
+    throw new AppError('El medio de pago Mercado Pago no está configurado', 503);
+  }
+
+  if (!medioPago.habilitado) {
+    throw new AppError('El medio de pago Mercado Pago no está habilitado', 409);
+  }
+
+  return medioPago;
+};
+
+const iniciarCheckoutMercadoPago = async (datos, usuario, opciones = {}) => {
+  if (!esObjetoPlano(datos)) {
+    throw new AppError('El cuerpo de la compra no es válido', 400);
+  }
+
+  if (!esCompradorRegistrado(usuario?.rol)) {
+    throw new AppError('Solo un cliente puede confirmar una compra', 403);
+  }
+
+  const idCliente = usuario.idCliente;
+  const idUsuario = usuario.idUsuario;
+  const claveIdempotencia = validarClaveIdempotencia(datos.claveIdempotencia);
+  const detallesPreparados = prepararDetalles(datos.detalles);
+  const { metodoEntrega, direccionEntrega } = prepararEntrega(datos);
+  const cotizacionAceptada = validarCotizacionAceptada(datos.cotizacionAceptada);
+
+  const hashContenido = calcularHashContenido({
+    idCliente,
+    detallesPreparados,
+    metodoEntrega,
+    direccionEntrega,
+  });
+
+  let intento;
+  let cotizacionRecalculada;
+
+  try {
+    const resultado = await sequelize.transaction(async (transaction) => {
+      const cliente = await Cliente.findByPk(idCliente, { transaction });
+
+      if (!cliente) {
+        throw new AppError('El cliente indicado no existe', 400);
+      }
+
+      await sequelize.query(
+        `INSERT INTO intentocompra
+           (claveIdempotencia, idCliente, hashContenido, estado, creadoEn, actualizadoEn)
+         VALUES (:clave, :idCliente, :hash, 'procesando', NOW(), NOW())
+         ON DUPLICATE KEY UPDATE idIntentoCompra = idIntentoCompra`,
+        {
+          replacements: {
+            clave: claveIdempotencia,
+            idCliente,
+            hash: hashContenido,
+          },
+          transaction,
+        },
+      );
+
+      intento = await IntentoCompra.findOne({
+        where: { claveIdempotencia, idCliente },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      if (intento.hashContenido !== hashContenido) {
+        throw new AppError(
+          'La clave de idempotencia ya se usó con un contenido distinto',
+          409,
+        );
+      }
+
+      if (intento.estado === 'aprobado') {
+        return {
+          tipo: 'aprobado',
+          idVenta: intento.idVenta,
+        };
+      }
+
+      if (intento.estado === 'rechazado') {
+        throw new AppError(
+          intento.motivoRechazo || 'El intento de compra fue rechazado',
+          409,
+        );
+      }
+
+      if (intento.estado === 'pendiente_pago') {
+        const datosGuardados = intento.datosCompra || {};
+
+        if (!datosGuardados.initPoint) {
+          throw new AppError(
+            'El intento existe, pero no tiene una URL de pago recuperable',
+            409,
+          );
+        }
+
+        return {
+          tipo: 'pendiente_pago',
+          initPoint: datosGuardados.initPoint,
+          idIntentoCompra: intento.idIntentoCompra,
+        };
+      }
+
+      await resolverMedioPagoMercadoPago(transaction);
+
+      cotizacionRecalculada = await cotizar(datos.detalles, {
+        transaction,
+        proveedorPrecios: opciones.proveedorPrecios,
+      });
+
+      if (cotizacionEstaDesactualizada(cotizacionRecalculada, cotizacionAceptada)) {
+        const error = new AppError(
+          'La cotización aceptada cambió: revisá el nuevo resumen antes de confirmar de nuevo',
+          409,
+        );
+
+        error.cotizacionVigente = aRespuestaPublica(cotizacionRecalculada);
+        error.codigo = 'COTIZACION_DESACTUALIZADA';
+
+        throw error;
+      }
+
+      return {
+        tipo: 'crear_preferencia',
+        idIntentoCompra: intento.idIntentoCompra,
+        idCliente,
+        idUsuario,
+        datosCompra: {
+          detalles: detallesPreparados,
+          metodoEntrega,
+          direccionEntrega,
+        },
+      };
+    });
+
+    if (resultado.tipo !== 'crear_preferencia') {
+      return resultado;
+    }
+
+    const notificationUrl = process.env.MP_WEBHOOK_URL;
+    const frontendUrl = process.env.FRONTEND_URL;
+
+    if (!notificationUrl || !frontendUrl) {
+      throw new AppError(
+        'Faltan configurar MP_WEBHOOK_URL o FRONTEND_URL',
+        503,
+      );
+    }
+
+    const preferencia = await crearPreferencia({
+      items: cotizacionRecalculada.lineas.map((linea) => ({
+        id: String(linea.idProducto),
+        title: linea.nombre,
+        quantity: linea.cantidad,
+        unit_price: Number((linea.precioFinalCentavos / 100).toFixed(2)),
+        currency_id: 'ARS',
+      })),
+      external_reference: String(resultado.idIntentoCompra),
+      metadata: {
+        id_intento_compra: resultado.idIntentoCompra,
+        id_cliente: idCliente,
+      },
+      notification_url: notificationUrl,
+      back_urls: {
+        success: `${frontendUrl}/`,
+        failure: `${frontendUrl}/`,
+        pending: `${frontendUrl}/`,
+      },
+      
+    });
+
+    const initPoint = preferencia.sandbox_init_point || preferencia.init_point;
+
+    if (!preferencia.id || !initPoint) {
+      throw new AppError(
+        'Mercado Pago no devolvió una preferencia de pago válida',
+        502,
+      );
+    }
+
+    await IntentoCompra.update(
+      {
+        estado: 'pendiente_pago',
+        idPreferenciaMercadoPago: String(preferencia.id),
+        datosCompra: {
+          ...resultado.datosCompra,
+          idUsuario,
+          initPoint,
+          montoEsperadoCentavos: cotizacionRecalculada.totalCentavos,
+        },
+        actualizadoEn: new Date(),
+      },
+      {
+        where: {
+          idIntentoCompra: resultado.idIntentoCompra,
+          estado: 'procesando',
+        },
+      },
+    );
+
+    return {
+      tipo: 'pendiente_pago',
+      idIntentoCompra: resultado.idIntentoCompra,
+      initPoint,
+    };
+  } catch (error) {
+    if (esErrorDeContencionTransitoria(error)) {
+      throw new AppError(
+        'Ocurrió una condición de carrera al iniciar el pago; reintentá la operación',
+        409,
+      );
+    }
+
+    throw error;
+  }
+};
+
 const confirmarCompra = async (datos, usuario, opciones = {}) => {
   if (!esObjetoPlano(datos)) {
     throw new AppError('El cuerpo de la compra no es válido', 400);
@@ -315,131 +679,23 @@ const confirmarCompra = async (datos, usuario, opciones = {}) => {
         };
       }
 
-      // --- Pago aprobado: registrar venta, detalles, stock, comprobante y pago ---
-      const venta = await Venta.create(
-        {
-          fecha: new Date(),
-          total: (cotizacionRecalculada.totalCentavos / 100).toFixed(2),
-          estado: 'registrada',
-          metodoEntrega,
-          idCliente,
-          // El checkout de cliente siempre usa el medio de pago simulado
-          // correspondiente (ya resuelto y validado arriba) — no un
-          // idMedioPago elegido a mano como en la carga manual del personal.
-          idMedioPago: medioPago.idMedioPago,
-        },
-        { transaction },
-      );
-
-      // Aviso in-app (ronda 2, Etapa 6): dentro de la MISMA transacción que
-      // crea la venta — si el resto de la compra revirtiera por cualquier
-      // motivo posterior, el aviso revierte con ella (no queda un aviso de
-      // "compra confirmada" de una compra que en los hechos no se confirmó).
-      // Solo se genera la PRIMERA vez que se aprueba este intento, nunca en
-      // un reintento con la misma clave de idempotencia (esa rama devuelve
-      // antes de llegar acá, ver más arriba).
-      await crearAviso(
-        {
-          idUsuario: usuario.idUsuario,
-          tipo: TIPOS_AVISO.COMPRA_CONFIRMADA,
-          mensaje: `Tu compra #${venta.idVenta} fue confirmada.`,
-          enlace: `/mis-compras/${venta.idVenta}`,
-        },
+      return await registrarCompraAprobada({
         transaction,
-      );
-
-      // Etapa 9: un aviso por tienda participante (Map deduplicado por
-      // idTienda, ver disponibilidadTienda.js). Igual que el aviso de arriba,
-      // un reintento con la misma clave nunca llega hasta acá.
-      await notificarTiendasParticipantes(
-        { idVenta: venta.idVenta, tiendasPorId: cotizacionRecalculada.tiendasPorId },
-        transaction,
-      );
-
-      if (direccionEntrega) {
-        await DireccionEntrega.create(
-          { idVenta: venta.idVenta, direccion: direccionEntrega },
-          { transaction },
-        );
-      }
-
-      for (const linea of cotizacionRecalculada.lineas) {
-        const subtotalCentavos = calcularSubtotalCentavos(
-          linea.precioFinalCentavos,
-          linea.cantidad,
-          `El subtotal del producto ${linea.nombre} no puede calcularse de forma segura`,
-          `El subtotal del producto ${linea.nombre} supera el máximo permitido`,
-        );
-
-        const detalleVenta = await DetalleVenta.create(
-          {
-            cantidad: linea.cantidad,
-            precioUnitario: (linea.precioFinalCentavos / 100).toFixed(2),
-            subtotal: (subtotalCentavos / 100).toFixed(2),
-            idVenta: venta.idVenta,
-            idProducto: linea.idProducto,
-          },
-          { transaction },
-        );
-
-        await DetalleVentaPromocion.create(
-          {
-            idDetalleVenta: detalleVenta.idDetalleVenta,
-            nombreProductoHistorico: linea.nombre,
-            precioListaUnitario: (linea.precioListaCentavos / 100).toFixed(2),
-            idPromocionProducto: linea.idPromocionProducto,
-            porcentajeDescuento: linea.porcentajeDescuento,
-            montoDescuentoUnitario: (linea.montoDescuentoCentavos / 100).toFixed(2),
-          },
-          { transaction },
-        );
-
-        await linea.producto.update(
-          { stockActual: linea.producto.stockActual - linea.cantidad },
-          { transaction },
-        );
-      }
-
-      await Comprobante.create(
-        {
-          idVenta: venta.idVenta,
-          numero: generarNumeroComprobante(venta.idVenta),
-          estadoCorreo: cliente.email ? 'pendiente' : 'no_aplica',
-          // Instantánea del comprador (CU-04, ronda de correcciones): se
-          // completa una sola vez, con el Cliente ya leído en esta misma
-          // transacción — si el cliente edita su nombre o correo después,
-          // este comprobante ya emitido no cambia (ver comprobante.model.js).
-          nombreCompradorHistorico: cliente.nombre,
-          apellidoCompradorHistorico: cliente.apellido,
-          correoCompradorHistorico: cliente.email,
-        },
-        { transaction },
-      );
-
-      await Pago.create(
-        {
-          idVenta: venta.idVenta,
+        cliente,
+        usuario,
+        idCliente,
+        metodoEntrega,
+        direccionEntrega,
+        cotizacionRecalculada,
+        medioPago,
+        intento,
+        datosPago: {
           tipo: resultadoPago.tipo,
           estado: 'aprobado_simulado',
           ultimosCuatroDigitos: resultadoPago.ultimosCuatroDigitos,
           marca: resultadoPago.marca,
-          monto: (cotizacionRecalculada.totalCentavos / 100).toFixed(2),
         },
-        { transaction },
-      );
-
-      // El carrito autenticado forma parte de la misma confirmación atómica:
-      // si cualquiera de las escrituras posteriores falla, la transacción
-      // restaura también sus filas. La rama idempotente aprobada retorna
-      // antes y no debe borrar productos agregados después de la compra.
-      await vaciarCarritoEnTransaccion(usuario.idUsuario, transaction);
-
-      await IntentoCompra.update(
-        { estado: 'aprobado', idVenta: venta.idVenta, actualizadoEn: new Date() },
-        { where: { idIntentoCompra: intento.idIntentoCompra }, transaction },
-      );
-
-      return { tipo: 'aprobado', idVenta: venta.idVenta, reintento: false };
+      });
     });
   } catch (error) {
     if (esErrorDeContencionTransitoria(error)) {
@@ -516,6 +772,197 @@ const resolverMedioPagoSimulado = async (tipoPagoSimulado, transaction) => {
   return medioPago;
 };
 
+
+
+
+
+
+const procesarWebhookMercadoPago = async (req) => {
+  // 1. Validar la firma: no confiamos en notificaciones sin autenticar.
+  const firmaValida = validarFirmaWebhook(req);
+
+  if (!firmaValida) {
+    throw new AppError('Firma de webhook de Mercado Pago inválida', 401);
+  }
+
+  // 2. Obtener el ID del pago notificado.
+  const idPago =
+    req.query?.['data.id'] ??
+    req.body?.data?.id;
+
+  if (!idPago) {
+    throw new AppError('La notificación no contiene un ID de pago', 400);
+  }
+
+  // 3. Consultar el pago directamente en Mercado Pago.
+  const pagoExterno = await consultarPago(String(idPago));
+
+  // Las notificaciones pueden llegar antes de que el pago esté aprobado.
+  // No creamos una venta para pagos pendientes o en proceso.
+  if (pagoExterno.status !== 'approved') {
+    return { procesado: false, estado: pagoExterno.status };
+  }
+
+  if (pagoExterno.currency_id !== 'ARS') {
+    throw new AppError('La moneda del pago no coincide con la esperada', 400);
+  }
+
+  // 4. Identificar el intento mediante la referencia guardada al crear
+  // la preferencia. No utilizamos un idCliente enviado por el navegador.
+  const idIntentoCompra = Number(pagoExterno.external_reference);
+  const idIntentoMetadata = Number(
+    pagoExterno.metadata?.id_intento_compra,
+  );
+
+  if (
+    !Number.isInteger(idIntentoCompra) ||
+    idIntentoCompra <= 0 ||
+    idIntentoMetadata !== idIntentoCompra
+  ) {
+    throw new AppError('El pago no corresponde a un intento válido', 400);
+  }
+
+  return sequelize.transaction(async (transaction) => {
+    // 5. Bloquear el intento para evitar que dos webhooks simultáneos
+    // registren dos ventas.
+    const intento = await IntentoCompra.findByPk(idIntentoCompra, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!intento) {
+      throw new AppError('No existe el intento asociado al pago', 404);
+    }
+
+    // Un webhook repetido nunca genera una segunda venta.
+    if (intento.estado === 'aprobado') {
+      if (String(intento.idPagoMercadoPago) !== String(pagoExterno.id)) {
+        throw new AppError(
+          'El intento ya fue aprobado con otro pago',
+          409,
+        );
+      }
+
+      return {
+        procesado: true,
+        reintento: true,
+        idVenta: intento.idVenta,
+      };
+    }
+
+    if (intento.estado !== 'pendiente_pago') {
+      throw new AppError(
+        'El intento no se encuentra pendiente de pago',
+        409,
+      );
+    }
+
+    const datosCompra = intento.datosCompra;
+
+    if (
+      !datosCompra ||
+      !Array.isArray(datosCompra.detalles) ||
+      !datosCompra.idUsuario ||
+      !datosCompra.montoEsperadoCentavos
+    ) {
+      throw new AppError(
+        'El intento no contiene los datos necesarios para confirmar la compra',
+        409,
+      );
+    }
+
+    // 6. Comprobar que el importe pagado coincide con el importe
+    // de la preferencia que se creó para este intento.
+    const montoPagadoCentavos = Math.round(
+      Number(pagoExterno.transaction_amount) * 100,
+    );
+
+    if (montoPagadoCentavos !== Number(datosCompra.montoEsperadoCentavos)) {
+      throw new AppError('El importe pagado no coincide con la compra', 409);
+    }
+
+    if (
+      Number(pagoExterno.metadata?.id_cliente) !== Number(intento.idCliente)
+    ) {
+      throw new AppError('El cliente del pago no coincide con el intento', 409);
+    }
+
+    // 7. Recuperar cliente y usuario desde nuestra propia base de datos.
+    const cliente = await Cliente.findByPk(intento.idCliente, {
+      transaction,
+    });
+
+    if (!cliente) {
+      throw new AppError('No existe el cliente asociado al intento', 404);
+    }
+
+    const usuario = await Usuario.findOne({
+      where: { idCliente: intento.idCliente },
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (
+      !usuario ||
+      Number(usuario.idUsuario) !== Number(datosCompra.idUsuario) ||
+      !esCompradorRegistrado(usuario.rol)
+    ) {
+      throw new AppError('No se pudo verificar al comprador del intento', 409);
+    }
+
+    // 8. Orden de bloqueos: intento → medio de pago → productos.
+    const medioPago = await resolverMedioPagoMercadoPago(transaction);
+
+    // No reservamos stock mientras el pago está pendiente.
+    // Lo comprobamos nuevamente ahora, antes de registrar la venta.
+    const cotizacionRecalculada = await cotizar(datosCompra.detalles, {
+      transaction,
+    });
+
+    if (
+      cotizacionRecalculada.totalCentavos !==
+      Number(datosCompra.montoEsperadoCentavos)
+    ) {
+      throw new AppError(
+        'El precio de los productos cambió después del pago. La compra requiere revisión manual',
+        409,
+      );
+    }
+
+    // 9. Registrar venta y pago aprobado en la misma transacción.
+    const resultado = await registrarCompraAprobada({
+      transaction,
+      cliente,
+      usuario,
+      idCliente: intento.idCliente,
+      metodoEntrega: datosCompra.metodoEntrega,
+      direccionEntrega: datosCompra.direccionEntrega,
+      cotizacionRecalculada,
+      medioPago,
+      intento,
+      datosPago: {
+        tipo: 'mercado_pago',
+        estado: 'aprobado',
+        idPagoMercadoPago: String(pagoExterno.id),
+      },
+    });
+
+    await intento.update(
+      {
+        idPagoMercadoPago: String(pagoExterno.id),
+        actualizadoEn: new Date(),
+      },
+      { transaction },
+    );
+
+    return {
+      procesado: true,
+      reintento: false,
+      idVenta: resultado.idVenta,
+    };
+  });
+};
+
 // Consulta el resultado de un intento de compra por su clave (CU-04, §1:
 // recuperación tras perder la respuesta de una compra ya confirmada). Pura
 // lectura, SIN transacción ni lock: nunca reemplaza el camino atómico de
@@ -529,15 +976,20 @@ const resolverMedioPagoSimulado = async (tipoPagoSimulado, transaction) => {
 // docs/cu04-checkout-pago.md.
 const consultarIntento = async (clave, usuario) => {
   if (!esCompradorRegistrado(usuario?.rol)) {
-    throw new AppError('Solo un cliente puede consultar sus propios intentos de compra', 403);
+    throw new AppError(
+      'Solo un cliente puede consultar sus propios intentos de compra',
+      403,
+    );
   }
 
   const claveValidada = validarClaveIdempotencia(clave);
 
-  // idCliente SIEMPRE de la sesión, nunca de la URL: un cliente solo puede
-  // consultar intentos propios (mismo criterio que confirmarCompra).
+  // idCliente SIEMPRE de la sesión, nunca de la URL.
   const intento = await IntentoCompra.findOne({
-    where: { claveIdempotencia: claveValidada, idCliente: usuario.idCliente },
+    where: {
+      claveIdempotencia: claveValidada,
+      idCliente: usuario.idCliente,
+    },
   });
 
   if (!intento) {
@@ -545,29 +997,45 @@ const consultarIntento = async (clave, usuario) => {
   }
 
   if (intento.estado === 'aprobado') {
-    return { encontrado: true, estado: 'aprobado', idVenta: intento.idVenta };
+    return {
+      encontrado: true,
+      estado: 'aprobado',
+      idVenta: intento.idVenta,
+    };
   }
 
   if (intento.estado === 'rechazado') {
-    return { encontrado: true, estado: 'rechazado', motivoRechazo: intento.motivoRechazo };
+    return {
+      encontrado: true,
+      estado: 'rechazado',
+      motivoRechazo: intento.motivoRechazo,
+    };
   }
 
-  // 'procesando': en la práctica no debería poder observarse desde una
-  // lectura sin lock fuera de la transacción que insertó la fila (una fila
-  // no comiteada no es visible para otra conexión), pero se maneja
-  // explícitamente igual, en vez de asumir que este caso es imposible.
-  return { encontrado: true, estado: 'procesando' };
+  if (intento.estado === 'pendiente_pago') {
+    return {
+      encontrado: true,
+      estado: 'pendiente_pago',
+      initPoint: intento.datosCompra?.initPoint ?? null,
+    };
+  }
+
+  // El intento todavía está en preparación.
+  return {
+    encontrado: true,
+    estado: 'procesando',
+  };
 };
 
 export {
   confirmarCompra,
   consultarIntento,
+  iniciarCheckoutMercadoPago,
   TTL_COTIZACION_MS,
-  // Exportadas para poder probar esta lógica pura (sin base de datos) en
-  // aislamiento — mismo criterio que promocionProducto.service.js#prepararDatosPromocion.
   calcularHashContenido,
   cotizacionEstaDesactualizada,
   generarNumeroComprobante,
   validarClaveIdempotencia,
   validarCotizacionAceptada,
+  procesarWebhookMercadoPago,
 };
