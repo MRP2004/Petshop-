@@ -13,8 +13,7 @@ import { validarCuilCuit } from '../utils/validacionFiscal.js';
 import { esPersonalInterno, esVendedorIndependiente } from '../utils/roles.js';
 
 // Marketplace: vendedores independientes (ronda 2, Etapa 8). Diseño de
-// esquema y autorización revisado con Codex ANTES de escribir esto (dos
-// rondas: diseño y luego implementación — ver docs/estado-proyecto.md).
+// esquema y autorización validados antes de implementar el servicio.
 
 const TIPOS_DOCUMENTO_VALIDOS = ['CUIL', 'CUIT'];
 

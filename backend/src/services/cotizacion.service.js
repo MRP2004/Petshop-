@@ -70,8 +70,8 @@ const validarPrecioVigente = (precioVigente, nombreProducto) => {
 };
 
 // Resumen/cotización de una compra: consulta productos, stock y precio
-// vigente de cada línea, y devuelve líneas + total ya calculados (CU-04,
-// §4). La usan tanto el endpoint de cotización (sin transacción, solo
+// vigente de cada línea, y devuelve líneas + total ya calculados. La usan
+// tanto el endpoint de cotización (sin transacción, solo
 // lectura, para mostrarle el resumen al cliente) como compra.service.js
 // (CON transacción y bloqueo, para releer los mismos datos de forma
 // autoritativa justo antes de confirmar — nunca se confía en lo que el
@@ -87,8 +87,8 @@ const cotizar = async (detallesCrudos, opciones = {}) => {
     ? { transaction, lock: transaction.LOCK.UPDATE }
     : {};
 
-  // Mismo instante para TODAS las líneas de esta cotización (revisión de
-  // diseño, Codex — CU-04, ronda de correcciones): calculado una única vez,
+  // Mismo instante para TODAS las líneas de esta cotización: se calcula una
+  // única vez,
   // no dentro del loop, para que todas las líneas usen el mismo instante
   // al evaluar la vigencia de sus promociones.
   const instanteEvaluacion = new Date();

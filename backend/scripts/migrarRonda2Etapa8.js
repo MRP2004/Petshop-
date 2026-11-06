@@ -1,6 +1,6 @@
 // Script que Mauro corre UNA vez, a mano, contra su base de desarrollo real
 // (petshop_db), para aplicar la Etapa 8 de la ronda 2 (marketplace) sin
-// perder datos. Mismo patrón que migrarRonda2Etapa7.js/migrarCU04Ronda2.js.
+// perder datos. Mismo patrón que las migraciones anteriores.
 //
 // ORDEN IMPORTANTE (a diferencia de las migraciones anteriores, esta etapa
 // agrega tablas NUEVAS —`tienda`, `solicitudvendedor`— Y modifica tablas

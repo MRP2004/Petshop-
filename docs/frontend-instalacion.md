@@ -75,9 +75,7 @@ para E2E", para el procedimiento completo.
 
 Ver [frontend-pruebas.md](frontend-pruebas.md).
 
-## Diseño y arquitectura
+## Arquitectura
 
-Ver [frontend-diseno.md](frontend-diseno.md) (referencia visual, sistema de
-diseño mobile-first, estructura de carpetas) y
-[mapa-del-sistema.md](mapa-del-sistema.md) (pantalla → ruta API →
-controlador → servicio → modelo).
+Para seguir cómo una pantalla se comunica con la API y las capas del
+backend, consultá [mapa-del-sistema.md](mapa-del-sistema.md).

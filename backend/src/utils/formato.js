@@ -1,5 +1,5 @@
-// Formato de fecha/hora/importe para comprobante y correo (CU-04, ronda de
-// correcciones): un único módulo para que el PDF y el texto del correo usen
+// Formato de fecha/hora/importe para comprobante y correo: un único módulo
+// para que el PDF y el texto del correo usen
 // exactamente las mismas reglas de presentación (la pantalla, en el
 // frontend, usa su propia copia equivalente — frontend/src/utils/formato.js
 // — porque backend y frontend son paquetes npm separados sin código común,

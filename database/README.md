@@ -11,8 +11,7 @@ hallazgos sobre claves foráneas).
 
 La tabla `promocionproducto`, antes huérfana (sin código), ahora tiene
 modelo/servicio/rutas (`PromocionProducto`, ver
-[docs/backend-api.md](../docs/backend-api.md) y
-[docs/estado-proyecto.md](../docs/estado-proyecto.md)) — se reutilizó tal
+[docs/backend-api.md](../docs/backend-api.md)) — se reutilizó tal
 cual estaba, sin cambiarle la forma. Esta etapa también agregó una tabla
 nueva, `usuario` (autenticación, ver
 [docs/backend-autenticacion.md](../docs/backend-autenticacion.md)), creada

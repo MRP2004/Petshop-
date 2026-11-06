@@ -6,11 +6,8 @@ import './models/index.js';
 const PORT = process.env.PORT || 3000;
 const ENTORNO = process.env.ENTORNO || 'desarrollo';
 
-// Corrección (revisión independiente): para los entornos aislados, el
-// nombre de base esperado es fijo y conocido (mismos valores por defecto
-// que scripts/sembrarDatosE2E.js y test-integracion/ayudaIntegracion.js).
-// "desarrollo" queda afuera a propósito: esa es la base habitual
-// (petshop_db) y no tiene un nombre fijo que validar acá.
+// En entornos aislados, valida que la conexión use la base esperada antes
+// de sincronizar los modelos. Desarrollo puede usar una base configurable.
 const BASES_PERMITIDAS_POR_ENTORNO = {
   e2e: process.env.E2E_DB_NAME_PERMITIDA || 'petshop_e2e',
   test: process.env.INTEGRACION_DB_NAME_PERMITIDA || 'petshop_test',
@@ -21,11 +18,8 @@ const startServer = async () => {
   try {
     await sequelize.authenticate();
 
-    // Antes, esto se consultaba DESPUÉS de sync() — solo informativo, pero
-    // sync() ya podía haber alterado el esquema de lo que fuera que DB_NAME
-    // resolviera, sin ninguna verificación previa. Ahora se consulta ANTES,
-    // y para ENTORNO=e2e/test se aborta acá mismo si la base EFECTIVA no es
-    // la esperada, sin llegar a sincronizar nada.
+    // Se valida la base efectiva antes de sincronizar los modelos para
+    // evitar modificar por error una base distinta en entornos aislados.
     const [[info]] = await sequelize.query(
       'SELECT DATABASE() AS baseEfectiva, CURRENT_USER() AS usuarioEfectivo',
     );
@@ -51,15 +45,8 @@ const startServer = async () => {
       console.log(`API Petshop (${ENTORNO}) ejecutándose en http://localhost:${PORT}`);
     });
 
-    // Corrección de una revisión posterior: si el puerto ya está en uso,
-    // Express/Node no lanzan una excepción que el try/catch de arriba
-    // pudiera atrapar (el error llega de forma asincrónica, como evento
-    // 'error' del servidor HTTP) — sin este manejo explícito, el proceso
-    // seguía "vivo" sin haber arrancado nada, sin avisar. Ahora aborta con
-    // un mensaje claro en vez de quedar en un estado ambiguo o de terminar
-    // usando otra instancia en silencio (que es justamente lo que no debe
-    // pasar entre desarrollo/E2E/integración: cada una tiene su puerto
-    // fijo, ver .env.e2e.example).
+    // El error de puerto ocupado llega como evento asincrónico del servidor,
+    // por eso se maneja explícitamente.
     servidor.on('error', (error) => {
       if (error.code === 'EADDRINUSE') {
         console.error(

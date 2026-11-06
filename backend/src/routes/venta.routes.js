@@ -37,23 +37,11 @@ router.post(
   requiereRol('vendedor', 'administrador'),
   cotizar,
 );
-// Corrección (revisión de Codex sobre el diff de CU-04): antes un cliente
-// autenticado podía llamar esta ruta directamente para registrarse su
-// propia compra, salteando por completo el checkout con pago simulado
-// (POST /api/compras) — sin cotización server-side, sin idempotencia, sin
-// comprobante. Ahora es exclusiva del personal, igual que "marcar como
-// enviada" más abajo: es la carga MANUAL de una venta para un cliente
-// elegido, no el autoservicio de un cliente. registrarVenta conserva de
-// todas formas su lógica interna para `usuario.rol === 'cliente'` (defensa
-// en profundidad, ver venta.service.js), aunque ya no sea alcanzable desde
-// esta ruta.
+// Esta ruta registra ventas manuales para un cliente elegido y es
+// exclusiva del personal. Las compras de clientes usan /api/compras.
 router.post('/', requiereAutenticacion, requiereRol('vendedor', 'administrador'), registrar);
-// Cancelación DIRECTA: exclusiva del personal (CU-04, corrección — revisión
-// de Mauro sobre la venta #20: "el cliente ya no puede ejecutar una
-// cancelación directa"). Un cliente que quiere cancelar su propia compra
-// usa POST /api/solicitudes-cancelacion en su lugar (ver
-// solicitudCancelacion.routes.js) — el personal aprueba o rechaza esa
-// solicitud, reutilizando esta misma cancelación transaccional.
+// La cancelación directa es exclusiva del personal. El cliente puede
+// solicitar la cancelación de su propia compra por otra ruta.
 router.patch(
   '/:id/cancelar',
   requiereAutenticacion,
@@ -77,7 +65,7 @@ router.patch(
   marcarComoEntregada,
 );
 
-// Comprobante (CU-04): PDF y reenvío de correo, protegidos por la misma
+// Comprobante: PDF y reenvío de correo, protegidos por la misma
 // regla de "propia o personal" que ver una venta (ver
 // comprobante.controller.js — la aplica obtenerVentaPorId, no esta ruta).
 router.get('/:id/comprobante/pdf', requiereAutenticacion, descargarPdf);

@@ -16,7 +16,7 @@ npm test
 |---|---|
 | `src/models/Carrito.test.js` | Lógica del modelo `Carrito` (agregar, actualizar cantidad, quitar, total, inmutabilidad, conversión a detalles de venta, lectura de `localStorage` corrupto/inválido). |
 | `src/components/ProductCard.test.jsx` | Renderizado (nombre, precio formateado, disponibilidad), reactividad ante un evento de usuario (clic en "Agregar al carrito" actualiza el contador del carrito vía contexto compartido) y estado deshabilitado sin stock. |
-| `src/utils/iconoProducto.test.js` | Selección del ícono del producto según su categoría (ver [frontend-diseno.md](frontend-diseno.md), revisión visual de la corrección anterior). |
+| `src/utils/iconoProducto.test.js` | Selección del ícono del producto según su categoría. |
 | `src/context/AuthContext.test.jsx` | **Corrección de una revisión posterior** (logout fallido, reescrita): `cerrarSesion` **solo** limpia el estado local si el servidor confirma el cierre o ya no reconoce la sesión — un fallo de red u otro error deja la sesión activa, expone un mensaje y permite reintentar (5 casos: cierre exitoso, fallo visible, reintento exitoso, sesión ya inválida, recarga después de un fallo). |
 | `src/components/ImagenProducto.test.jsx` | Muestra la imagen real cuando el producto la tiene, cae al ícono por categoría cuando no, y también cae al ícono si la imagen real falla al cargar. |
 | `src/api/httpClient.test.js` | **Corrección de una revisión posterior** (nombre de cookie CSRF por entorno): con `VITE_ENTORNO=e2e`, lee `petshop_csrf_e2e` (no `petshop_csrf`) para el header `X-CSRF-Token` — reproduce el bug real que esto corrige (ver [backend-autenticacion.md](backend-autenticacion.md)). |
@@ -163,17 +163,15 @@ pantalla), cada uno corrido en los 3 viewports (`sm-mobile`/`md-tablet`/
 | # | Caso cubierto | Archivo |
 |---|---|---|
 | 1 | Sin sesión, entrar a `/panel` redirige a iniciar sesión | `e2e/recorrido-completo.spec.js` |
-| 2 | Iniciar sesión (cliente), buscar un producto, agregar al carrito, confirmar la compra, ver el número de operación, solicitar la cancelación y ver que el personal la apruebe (corregido en CU-04, ronda 4 — el cliente ya no cancela directamente, ver [cu04-checkout-pago.md](cu04-checkout-pago.md) §7) | ídem |
+| 2 | Iniciar sesión (cliente), buscar un producto, agregar al carrito, confirmar la compra, ver el número de operación, solicitar la cancelación y ver que el personal la apruebe | ídem |
 | 3 | Credenciales incorrectas muestran un mensaje de error claro, sin redirigir | ídem |
 | 4 | Un cliente autenticado no puede entrar al panel de personal (redirige a "/") | ídem |
 | 5 | Un vendedor carga una venta manual para un cliente existente y la marca como enviada | ídem |
 | 6 | Capturas de solo lectura del catálogo, detalle, promociones, carrito, checkout y panel (no confirma ninguna compra) | `e2e/capturas.spec.js` |
 
-No cubre (fuera de este alcance, ver "Pendientes de alcance" en
-[estado-proyecto.md](estado-proyecto.md)): los CRUD de personal
-(Categoría, Proveedor, TipoMascota, MedioPago, Promoción) más allá del de
-Producto en las capturas, el filtro de ventas por proveedor, ni las reglas
-de aplicación de `PromocionProducto`.
+No cubre los CRUD de personal (Categoría, Proveedor, TipoMascota,
+MedioPago, Promoción) más allá del de Producto en las capturas, el filtro
+de ventas por proveedor ni las reglas de aplicación de `PromocionProducto`.
 
 Las cuentas que usan estas pruebas (`cliente@petshop-e2e.test`,
 `vendedor@petshop-e2e.test`) y el cliente "Cliente De Prueba" que selecciona el

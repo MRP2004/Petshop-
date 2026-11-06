@@ -24,8 +24,6 @@ Punto de entrada de la documentación del proyecto (ver
 
 ## Frontend
 
-- [frontend-diseno.md](frontend-diseno.md) — referencia visual, sistema de
-  diseño mobile-first, componentes reutilizables, servicios.
 - [frontend-pruebas.md](frontend-pruebas.md) — pruebas unitarias/de
   componentes (Vitest) y de extremo a extremo (Playwright).
 
@@ -36,10 +34,6 @@ Punto de entrada de la documentación del proyecto (ver
 - [casos-de-uso.md](casos-de-uso.md) — registrar, cancelar y marcar como
   enviada una venta: actor, precondiciones, pasos, validaciones,
   transacciones, pruebas y ejemplo.
-- [estado-proyecto.md](estado-proyecto.md) — qué está implementado,
-  probado sin base, verificado, o pendiente, con la matriz de requisitos
-  de regularidad y aprobación, y las decisiones de negocio pendientes de
-  confirmación.
 
 ## Modelo de dominio
 

@@ -1,6 +1,5 @@
-// Procedimiento de migración versionado e idempotente para la ronda de
-// correcciones de CU-04 (ver docs/backend-base-de-datos.md, "Migración de
-// esquema — CU-04, ronda 2"). A diferencia de la ronda anterior (que solo
+// Procedimiento de migración versionado e idempotente para actualizar las
+// tablas existentes. A diferencia de la ronda anterior (que solo
 // agregaba tablas NUEVAS, algo que sequelize.sync() ya resuelve solo), esta
 // ronda ALTERA tablas que ya existen (`mediopago`, `comprobante`) — sync()
 // nunca hace eso, así que hace falta este script.
@@ -9,11 +8,10 @@
 // más de una vez sin romper nada si ya se aplicó, parcial o totalmente):
 //   1. Índice único sobre mediopago.nombre (lo necesita el lock de
 //      compra.service.js#resolverMedioPagoSimulado).
-//   2. ENUM de comprobante.estadoCorreo, con sus valores nuevos (CU-04, §3),
+//   2. ENUM de comprobante.estadoCorreo, con sus valores nuevos,
 //      migrando los 'enviado' existentes a 'simulado' (ver más abajo, "por
 //      qué 'simulado' y no otra cosa").
-//   3. Tres columnas nuevas en comprobante (instantánea histórica del
-//      comprador, CU-04, §4).
+//   3. Tres columnas nuevas en comprobante (instantánea histórica del comprador).
 //
 // Exporta la función para que tanto el script que corre Mauro contra su
 // base real como el script de verificación (contra una base descartable)
@@ -111,9 +109,9 @@ const migrarEstadoCorreo = async (sequelize, log) => {
      NOT NULL DEFAULT 'pendiente'`,
   );
 
-  // Por qué 'simulado' y no 'aceptado': en este proyecto nunca hubo
-  // credenciales SMTP reales configuradas hasta ahora (ver
-  // docs/cu04-checkout-pago.md) — todo 'enviado' previo es, con certeza,
+  // Por qué 'simulado' y no 'aceptado': todo 'enviado' previo corresponde
+  // a un mensaje de prueba, ya que no había credenciales SMTP reales
+  // configuradas. Todo 'enviado' previo es, con certeza,
   // un mensaje armado por el transporte de prueba (jsonTransport), nunca un
   // envío real aceptado por un servidor SMTP. Se documenta la premisa acá
   // porque no hay forma de derivarla de los datos mismos.

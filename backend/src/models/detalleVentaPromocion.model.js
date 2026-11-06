@@ -2,7 +2,7 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
 import DetalleVenta from './detalleVenta.model.js';
 
-// Desglose histórico de precio/promoción de un detalle de venta (CU-04):
+// Desglose histórico de precio/promoción de un detalle de venta:
 // precio de lista, descuento y promoción aplicada AL MOMENTO de la compra.
 // Tabla nueva 1 a 1 con DetalleVenta (mismo motivo que pago.model.js/
 // comprobante.model.js: sync() no altera `detalleventa`, que ya existía).

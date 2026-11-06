@@ -15,9 +15,8 @@ Cubre el pedido de la **ronda 2** (rediseño integral) y el cierre de la
   porque le corresponde a otra persona.
 
 "Ejecutada en esta ronda" quiere decir: la suite que la contiene pasó
-completa el 2026-09-27. Números en
-[estado-proyecto.md](estado-proyecto.md), "Decimonovena corrección". Nada
-de esta tabla se da por verificado solo porque está documentado.
+completa el 2026-09-27. Nada de esta tabla se da por verificado solo
+porque está documentado.
 
 Abreviaturas de rutas: `test/` y `test-integracion/` son de `backend/`
 (unitarias sin base y de integración contra MySQL real `petshop_test`);

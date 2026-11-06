@@ -4,7 +4,7 @@
 // valores arbitrarios (incluso 0). La corrección está en venta.service.js
 // (registrarVenta ignora esos dos campos cuando usuario.rol === 'cliente').
 //
-// Corrección posterior (revisión de Codex sobre el diff de CU-04): la ruta
+// La ruta
 // POST /api/ventas pasó a ser exclusiva del personal (ver
 // routes/venta.routes.js) — un cliente que la llamaba directamente se
 // salteaba el checkout con pago simulado por completo. Los casos de acá
@@ -177,7 +177,7 @@ test('retiro en sucursal ignora cualquier dirección que se mande igual (no se c
   assert.equal(direccionEntregaCreada, undefined);
 });
 
-test('POST /api/ventas con un token de cliente responde 403: la ruta es exclusiva del personal desde CU-04 (el cliente compra por /api/compras)', async () => {
+test('POST /api/ventas con un token de cliente responde 403: la ruta es exclusiva del personal (el cliente compra por /api/compras)', async () => {
   const respuesta = await request(app)
     .post('/api/ventas')
     .set('Authorization', autorizacion(tokenCliente(7)))

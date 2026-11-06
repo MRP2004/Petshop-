@@ -1,8 +1,4 @@
-// Procedimiento de migración versionado e idempotente para la Etapa 8 de
-// la ronda 2 ("marketplace: vendedores independientes" — ver
-// docs/estado-proyecto.md). Diseño de esquema y autorización revisado con
-// Codex ANTES de escribir este archivo (ver EVIDENCIA-codex-etapa8-diseno-
-// revision.txt en el ZIP de entrega de esta etapa).
+// Migración versionada e idempotente para vendedores independientes.
 //
 // Dos cambios sobre tablas EXISTENTES, los dos 100% aditivos (sin ningún
 // UPDATE de filas ya cargadas):

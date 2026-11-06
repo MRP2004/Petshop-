@@ -137,7 +137,7 @@ const prepararEsquema = async () => {
 // se borra antes que ambas), `direccionentrega` (FK obligatoria a `venta`,
 // tabla del caso de uso de envío a domicilio: se borra antes que venta),
 // `solicitudcancelacion` (FK obligatoria a `venta`: se borra antes que
-// venta, misma razón) y las cuatro tablas de CU-04 (`pago`, `comprobante`,
+// venta, misma razón) y las tablas `pago`, `comprobante`,
 // `detalleventapromocion` —dependen de `venta`/`detalleventa`, se borran
 // antes— e `intentocompra` —depende de `cliente`/`venta`, se borra antes
 // que ambas—) y `direccioncliente` (FK obligatoria a `cliente`, ronda 2:

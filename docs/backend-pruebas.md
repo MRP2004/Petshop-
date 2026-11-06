@@ -165,45 +165,25 @@ párrafo; acá se listan una por una.
 | Suite | ¿Corrió en esta etapa? | Resultado real | Contra qué base |
 |---|---|---|---|
 | Backend sin base (`npm test`) | Sí | **236 pruebas, 236 aprobadas, 0 falladas** | Ninguna (mockeada/interceptada) |
-| Backend integración (`npm run test:integracion`) | Sí (novena corrección, CU-04 ronda 4) | **74 pruebas, 74 aprobadas, 0 falladas**, real contra MySQL — ver [estado-proyecto.md](estado-proyecto.md) | `petshop_test` |
+| Backend integración (`npm run test:integracion`) | Sí | **74 pruebas, 74 aprobadas, 0 falladas**, real contra MySQL | `petshop_test` |
 | Frontend unitarias/componentes (`npm test` en `frontend/`) | Sí | Ver [frontend-pruebas.md](../docs/frontend-pruebas.md) | Ninguna |
-| Frontend E2E (`npx playwright test`) | Sí (novena corrección, CU-04 ronda 4) | **36 casos, 36 aprobados** (12 casos × 3 viewports), real contra el backend/frontend aislados, incluyendo la solicitud de cancelación del cliente y la cancelación directa del personal con confirmación — ver [estado-proyecto.md](estado-proyecto.md) | `petshop_e2e`, nunca `petshop_db` |
+| Frontend E2E (`npx playwright test`) | Sí | **36 casos, 36 aprobados** (12 casos × 3 viewports), contra el backend y frontend aislados | `petshop_e2e`, nunca `petshop_db` |
 
-**Backend, sin base**: ejecutada de verdad en la novena corrección (CU-04,
-ronda 4), con el comando exacto de arriba, 236/236. Sobre las 227 de la
-octava corrección, suma 6 nuevas en `correo.service.test.js` (adjunto con
+**Backend, sin base**: ejecutada con el comando exacto de arriba, 236/236.
+Incluye pruebas en `correo.service.test.js` (adjunto con
 firma `%PDF`, fallo de generación de PDF, con/sin/mal-configurada
 `URL_PUBLICA_FRONTEND`) + 3 nuevas en `ventaCancelacionPermisos.test.js`
-(corrección adicional post-entrega: `cancelarVenta` ahora exige
-explícitamente `vendedor`/`administrador`, rechazando también un rol
-desconocido o la ausencia de usuario, no solo `'cliente'` — ver
-`cu04-informe-cierre.md` §12.10).
+(que comprueban que `cancelarVenta` solo admite los roles
+`vendedor`/`administrador`).
 
-**Backend, integración**: sobre las 61 de la octava corrección, suma 13
-nuevas — 12 en `test-integracion/solicitudCancelacion.integracion.js`
+**Backend, integración**: 12 pruebas en
+`test-integracion/solicitudCancelacion.integracion.js`
 (nuevo: solicitar, aprobar, rechazar, duplicados, decisiones repetidas,
 cierre automático de una solicitud pendiente al cancelar/enviar
-directamente, y dos escenarios de concurrencia real) + 1 en
-`compra.integracion.js` ("el propio cliente NO puede cancelar
-directamente").
+directamente y escenarios de concurrencia real), además de una prueba en
+`compra.integracion.js` que verifica que el cliente no puede cancelar
+directamente.
 
-**Backend, integración**: sigue exactamente en el mismo estado que en la
-entrega anterior (bloqueo de privilegios de MySQL, ver
-[backend-base-de-datos.md](backend-base-de-datos.md), re-verificado con una
-consulta de solo lectura en esta corrección, sin volver a intentar crear
-la base). No se declara aprobada ni cerrada.
-
-**Frontend E2E**: la entrega anterior había corrido las 15 pruebas
-completas de `e2e/recorrido-completo.spec.js` contra `petshop_db`
-(desarrollo), lo que dejó ventas de demostración reales ahí — ver el
-registro exacto en [estado-proyecto.md](estado-proyecto.md), sección
-"Operaciones de demostración sobre la base de desarrollo". Esta corrección
-**no volvió a correr esa suite** (evita seguir escribiendo sobre
-desarrollo); tampoco se limpiaron ni restauraron los datos que ya había
-(no se borra nada automáticamente). Lo único que se ejecutó contra el
-servidor real en esta etapa fue: (a) verificaciones manuales de solo
-lectura por HTTP (login, perfil, CSRF, logout — ninguna crea una venta) y
-(b) un script de capturas de pantalla (`e2e/capturas.spec.js`,
-rediseñado para esta corrección) que navega y iguala hasta el formulario
-de checkout sin nunca hacer clic en "Confirmar compra": se comprobó antes
-y después que el conteo de filas de `venta` en la base no cambió.
+**Frontend E2E**: las pruebas deben ejecutarse contra `petshop_e2e`, no
+contra la base de desarrollo. La suite puede crear ventas de prueba; no
+borra ni restaura automáticamente esos datos.

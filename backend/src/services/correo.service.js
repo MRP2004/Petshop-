@@ -17,8 +17,8 @@ import { generarPdfComprobante } from './comprobantePdf.service.js';
 // agregar un tercer estado "incierto" (ver comprobante.model.js).
 const TIMEOUT_ENVIO_MS = 8000;
 
-// Transporte configurado por variables de entorno (CU-04, §8/ronda de
-// correcciones): SMTP real si hay SMTP_HOST configurado y no se pidió
+// Transporte configurado por variables de entorno: SMTP real si hay
+// SMTP_HOST configurado y no se pidió
 // explícitamente el modo de prueba; si no, un transporte "json" que arma el
 // mensaje en memoria y no manda nada real. Devuelve también `modo`, para
 // que quien llama sepa CUÁL de los dos motivos de "no hay envío real" está
@@ -56,8 +56,8 @@ const crearTransportador = () => {
   };
 };
 
-// El destinatario y el nombre son SIEMPRE el dato histórico del comprador
-// (CU-04, ronda de correcciones — revisión de diseño, Codex): usar
+// El destinatario y el nombre son siempre el dato histórico del comprador:
+// usar
 // venta.cliente.email/nombre acá reintroduciría el mismo problema que en el
 // PDF (ver comprobantePdf.service.js) — el cliente podría cambiar su correo
 // entre el commit de la venta y el momento en que efectivamente se manda
@@ -102,8 +102,8 @@ const obtenerEnlaceValido = (idVenta) => {
 };
 
 // `pdfAdjunto`: el mismo Buffer que genera comprobantePdf.service.js para la
-// descarga manual desde el detalle de la venta (CU-04, corrección — "no
-// mantengas dos diseños distintos"): el correo automático adjunta EXACTAMENTE
+// descarga desde el detalle de la venta: el correo automático adjunta
+// exactamente
 // ese PDF, no arma uno propio.
 const construirMensaje = (venta, pdfAdjunto) => {
   const nombre = venta.comprobante.nombreCompradorHistorico ?? venta.cliente.nombre;
@@ -111,9 +111,8 @@ const construirMensaje = (venta, pdfAdjunto) => {
   const destinatario = venta.comprobante.correoCompradorHistorico ?? venta.cliente.email;
   const enlace = obtenerEnlaceValido(venta.idVenta);
 
-  // El reenvío debe reflejar el estado ACTUAL, incluida una venta cancelada
-  // (CU-04, ronda de correcciones): antes el texto siempre decía "tu compra
-  // fue confirmada", sin importar si después se canceló. El estado y el
+  // El reenvío debe reflejar el estado actual, incluida una venta cancelada.
+  // El estado y el
   // pago vienen de las mismas etiquetas legibles que usa el PDF/la
   // pantalla, no un texto aparte.
   const lineaEstado = `Estado del pedido: ${etiquetaEstadoVenta(venta.estado)}.`;
@@ -228,15 +227,13 @@ const enviarComprobantePorCorreo = async (venta) => {
     if (modo === 'prueba') {
       // El transporte de prueba arma el mensaje en memoria y nunca lo
       // manda a ningún lado: jamás puede considerarse "aceptado" por un
-      // servidor real (CU-04, ronda de correcciones — "un transporte en
-      // memoria nunca debe producir un mensaje de 'correo enviado'").
+      // servidor real.
       estadoFinal = 'simulado';
     } else {
       // SMTP real: `info.rejected` lista direcciones que el servidor
       // explícitamente rechazó; `info.accepted`, las que aceptó. La
       // aceptación del proveedor SMTP no es lo mismo que "llegó a la
-      // bandeja del destinatario" — eso esta capa no puede saberlo, y no se
-      // lo hace pasar por tal (ver docs/cu04-checkout-pago.md).
+      // bandeja del destinatario"; esta capa no puede saberlo ni afirmarlo.
       const destinatarioRechazado = Array.isArray(info?.rejected) && info.rejected.length > 0;
       const destinatarioAceptado = !Array.isArray(info?.accepted) || info.accepted.length > 0;
       estadoFinal = destinatarioRechazado || !destinatarioAceptado ? 'fallido' : 'aceptado';

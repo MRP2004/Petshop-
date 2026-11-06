@@ -1,6 +1,6 @@
 // Prueba de integración real contra MySQL para el buscador predictivo
-// (ronda 2, ver docs/frontend-diseno.md): coincidencia por nombre, exclusión
-// de productos de prueba, límite de resultados e insensibilidad a
+// coincidencia por nombre, exclusión de productos de prueba, límite de
+// resultados e insensibilidad a
 // mayúsculas/tildes de la propia comparación (no de collation). No se
 // ejecuta con `npm test`.
 import { test, before, beforeEach, after } from 'node:test';

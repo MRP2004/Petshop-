@@ -3,8 +3,7 @@ import sequelize from '../config/database.js';
 import Cliente from './cliente.model.js';
 import Producto from './producto.model.js';
 
-// Favoritos persistentes por cuenta (ronda 2, ver docs/frontend-diseno.md):
-// tabla NUEVA, gratis vía sync() (mismo motivo de siempre: no tocar
+// Favoritos persistentes por cuenta: tabla nueva, creada vía sync() sin tocar
 // tablas existentes). `idFavorito` autoincremental propio (no compone la
 // PK con idCliente+idProducto directamente) para poder borrar por su
 // propio id de forma simple desde el service, pero el índice único

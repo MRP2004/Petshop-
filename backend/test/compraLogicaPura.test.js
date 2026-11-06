@@ -121,7 +121,7 @@ test('cotizacionEstaDesactualizada detecta una promoción distinta aunque el pre
 });
 
 test('cotizacionEstaDesactualizada detecta un cambio en el desglose (lista/descuento) aunque el precio final y el total coincidan', () => {
-  // CU-04, §6: "pedir reconfirmación cuando cambien los importes o
+  // Pedir reconfirmación cuando cambien los importes o
   // condiciones relevantes del desglose aceptado, aunque el total final
   // coincida" — acá precioListaCentavos y montoDescuentoCentavos cambiaron
   // de forma compensada (el precio de lista subió y el descuento subió con

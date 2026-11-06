@@ -1,4 +1,4 @@
-// Datos de DEMOSTRACIÓN para el débito simulado del checkout (CU-04). Deben
+// Datos de demostración para el débito simulado del checkout. Deben
 // coincidir exactamente con backend/src/services/pagoSimulado.service.js
 // (TARJETAS_DEBITO_SIMULADAS) — no hay forma de compartir código entre
 // frontend y backend en este proyecto, así que si se cambian ahí hay que

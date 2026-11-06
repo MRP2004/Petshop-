@@ -1,7 +1,7 @@
-// Verificación puntual (no una suite automática) de que agregar las tablas
-// de CU-04 es seguro tanto en una instalación NUEVA como en la
+// Verificación puntual (no una suite automática) de que crear las tablas
+// nuevas es seguro tanto en una instalación NUEVA como en la
 // ACTUALIZACIÓN de un esquema previo que ya tenía datos — ver
-// docs/backend-base-de-datos.md, "Migración de esquema (CU-04)".
+// docs/backend-base-de-datos.md.
 //
 // No hay ALTER TABLE en ningún lado: las cuatro tablas nuevas (pago,
 // comprobante, detalleventapromocion, intentocompra) son eso, TABLAS
@@ -10,10 +10,8 @@
 // completo — no hace falta un script de migración aparte. Esto solo lo
 // demuestra contra una base descartable, nunca contra petshop_db.
 //
-// Uso (requiere la misma habilitación que test-integracion/, y solo corre
-// contra el nombre de base permitido):
-//   cd backend
-//   DOTENV_CONFIG_PATH=.env.test node scripts/verificarMigracionCU04.js
+// Requiere la misma habilitación que test-integracion/ y solo corre contra
+// el nombre de base permitido. Usa la configuración de .env.test.
 import 'dotenv/config';
 import sequelize from '../src/config/database.js';
 import '../src/models/tipoMascota.model.js';
@@ -85,7 +83,7 @@ const paso1_instalacionNueva = async () => {
 const paso2_actualizacionConDatos = async () => {
   console.log('\n--- Paso 2: actualización de un esquema PREVIO (con datos ya cargados) ---');
 
-  // Simula el estado "antes de CU-04": borra SOLO las 4 tablas nuevas,
+  // Simula un esquema previo: borra SOLO las 4 tablas nuevas,
   // dejando el resto del esquema (y los datos que se carguen ahora) como si
   // fuera una base de desarrollo real que todavía no las tiene.
   for (const tabla of TABLAS_CU04) {

@@ -2,7 +2,7 @@ import PDFDocument from 'pdfkit';
 import { formatearImporte, formatearFechaHora } from '../utils/formato.js';
 import { etiquetaEstadoPago, etiquetaEstadoVenta } from '../utils/estadosLegibles.js';
 
-// Diseño del comprobante (CU-04, §7): referencia visual "comprobante
+// Diseño del comprobante: referencia visual "comprobante
 // comercial" (encabezado, datos del comprador, tabla, total separado) SIN
 // copiar CUIT/condición tributaria/domicilios de terceros — no es una
 // factura fiscal, se lo aclara explícitamente en el pie. Verde de marca
@@ -16,8 +16,7 @@ const MARGEN = 50;
 const ANCHO_UTIL = 595.28 - MARGEN * 2; // A4
 
 // Columnas de la tabla de productos: cantidad, descripción, precio de lista
-// unitario, descuento, subtotal final (CU-04, §7 — "cantidad, descripción,
-// precio unitario de lista, descuento y subtotal final").
+// unitario, descuento y subtotal final.
 const COLUMNAS = {
   cantidad: { x: MARGEN, ancho: 40 },
   descripcion: { x: MARGEN + 40, ancho: 195 },
@@ -33,7 +32,7 @@ const ALTURA_MINIMA_FILA = 20;
 // del margen inferior — un footer puesto justo en ese borde (o más allá)
 // terminaba generando una página en blanco extra en cada comprobante de una
 // sola página (defecto real, encontrado al revisar visualmente los PDF de
-// muestra, no solo generarlos — CU-04, §7).
+// muestra, no solo generarlos).
 const dibujarPiePagina = (documento) => {
   const y = documento.page.height - documento.page.margins.bottom - 20;
   documento
@@ -70,8 +69,7 @@ const dibujarEncabezadoTabla = (documento, y) => {
 const LIMITE_INFERIOR = (documento) => documento.page.height - documento.page.margins.bottom - 30;
 
 // Salto de página manual PARA FILAS DE PRODUCTOS, repitiendo el encabezado
-// de la tabla (CU-04, §7: "repetición del encabezado de tabla cuando
-// corresponda"; "descripciones largas y varias páginas sin
+// de la tabla para descripciones largas y varias páginas sin
 // superposiciones"). pdfkit no repagina tablas solo: cada fila calcula su
 // propia altura (según cuánto ocupe la descripción envuelta) ANTES de
 // dibujarla, para decidir si entra en lo que queda de página.

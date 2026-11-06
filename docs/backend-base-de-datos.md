@@ -73,18 +73,13 @@ de la primera entrega, `sync()` no hace nada de esto (nunca altera tablas
 existentes). Verificado contra `petshop_test` descartable, con el esquema
 previo de la primera entrega de CU-04 (con datos ya cargados) y aplicando
 la migración dos veces seguidas para confirmar que la segunda corrida es
-un no-op seguro — ver `backend/scripts/verificarMigracionCU04Ronda2.js` y
-[cu04-checkout-pago.md](cu04-checkout-pago.md), §4, para la salida
-completa de ambos scripts de verificación.
+un no-op seguro — ver `backend/scripts/verificarMigracionCU04Ronda2.js` para
+la verificación.
 
-**CU-04, cuarta ronda de correcciones**: vuelve al caso simple, como la
-primera entrega — la única tabla nueva, `solicitudcancelacion` (solicitud
-de cancelación del cliente, ver
-[cu04-checkout-pago.md](cu04-checkout-pago.md) §7), es eso, una tabla
-NUEVA, relacionada 1 a N con `venta` — no altera ninguna columna ni tabla
-existente, así que no hizo falta ningún `ALTER TABLE` ni script de
-migración: reiniciar el backend (que llama a `sync()`) alcanza, igual que
-en la primera entrega.
+La tabla nueva `solicitudcancelacion` almacena solicitudes de cancelación
+de clientes y se relaciona 1 a N con `venta`. No altera ninguna tabla
+existente, así que no hace falta un `ALTER TABLE` ni un script de
+migración: basta con reiniciar el backend, que llama a `sync()`.
 
 **Ronda 2 (rediseño integral), Etapas 4, 5 y 6**: tres tablas nuevas
 (`direccioncliente`, `favorito`, `aviso`), ninguna toca una tabla
@@ -97,9 +92,7 @@ se angosta) de 3 a 5 valores — a diferencia de
 `comprobante.estadoCorreo` en la ronda anterior, acá no hace falta ningún
 `UPDATE` de datos: no se está resolviendo ninguna ambigüedad, solo se
 agregan valores nuevos al ENUM, así que ninguna fila existente se
-reinterpreta ni se reescribe. Diseño de esquema presentado a Codex ANTES
-de escribir el modelo o la migración (ver
-[estado-proyecto.md](estado-proyecto.md), "Decimoséptima corrección").
+reinterpreta ni se reescribe.
 Script: `backend/scripts/migrarRonda2Etapa7.js --confirmar` (lógica en
 `migracionRonda2Etapa7.js`, mismo patrón que `migracionCU04Ronda2.js`).
 Verificado contra `petshop_test` descartable con una venta histórica ya
@@ -112,11 +105,8 @@ desarrollo (no se hizo acá — la regla de "nunca migrar `petshop_db`"
 sigue en pie).
 
 **Ronda 2, Etapa 8 (marketplace de vendedores independientes)**: la etapa
-de mayor riesgo de la ronda — dos `ALTER TABLE` aditivos sobre tablas
-existentes CON datos reales, más dos tablas nuevas. Diseño de esquema y
-autorización revisado con Codex en dos rondas (diseño, luego
-implementación) antes de escribir modelo o migración — ver
-[estado-proyecto.md](estado-proyecto.md), "Decimoctava corrección".
+requiere dos `ALTER TABLE` aditivos sobre tablas existentes y dos tablas
+nuevas.
 `usuario.rol` se amplía con `'vendedor_independiente'` (ninguna cuenta
 `'vendedor'` existente cambia de significado); `producto.idTienda` es una
 columna nueva NULLABLE con FK hacia la tabla nueva `tienda` (NULL en toda
@@ -196,8 +186,7 @@ desarrollo, sin escribir nada:
   servicio, controlador ni ruta correspondiente en el código actual**. Es
   esquema huérfano: quedó de un desarrollo anterior de la funcionalidad
   `PromocionProducto` (comprometida en `proposal.md` pero no implementada
-  en esta rama). No se tocó esa tabla en esta etapa. Ver
-  [estado-proyecto.md](estado-proyecto.md).
+  en esta rama). No se modificó esa tabla en esta etapa.
 - Todas las tablas usan **InnoDB**: soporta transacciones, bloqueo de filas
   y las FK que el código de ventas y de stock necesitan.
 - No existe **ninguna restricción `UNIQUE`** en ninguna tabla (más allá de
@@ -467,8 +456,7 @@ existente en absoluto, no solo evita ejecutar el cambio ahora.
 
 ## Imágenes de producto: mismo criterio que direccionEntrega
 
-Corrección de esta etapa (ver también
-[frontend-diseno.md](frontend-diseno.md)): para cargar una imagen real por
+Para cargar una imagen real por
 producto (opcional — sigue sin haber fotos reales fabricadas) se aplicó la
 misma lección que domicilio de entrega, directamente: una tabla nueva
 relacionada (`imagenproducto`, 1 a 1 opcional con `producto`), no una
@@ -497,12 +485,9 @@ cualquier base donde el backend arranque (desarrollo, o una futura
 
 ## Estado de la integración: no se declara cerrada
 
-> **Actualización (Etapa 9, 2026-09-27):** esta sección describe una
-> etapa temprana y ya no refleja el estado actual. El bloqueo de
-> privilegios se resolvió, y la suite de integración completa corre contra
-> `petshop_test` real: 147/147 en esta ronda (ver
-> [estado-proyecto.md](estado-proyecto.md)). Se conserva el texto original
-> como registro histórico.
+> Esta sección conserva resultados de una etapa anterior y puede no
+> representar el estado actual. Antes de tomar decisiones, ejecutá las
+> pruebas de integración con una base de pruebas aislada.
 
 Ninguna de las pruebas de `test-integracion/` se ejecutó todavía contra
 datos reales en esta etapa (bloqueo de privilegios, ver arriba). Se

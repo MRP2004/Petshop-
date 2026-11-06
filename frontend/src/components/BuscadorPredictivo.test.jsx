@@ -5,8 +5,8 @@ import { MemoryRouter, Routes, Route, useSearchParams } from 'react-router-dom';
 import BuscadorPredictivo from './BuscadorPredictivo.jsx';
 import productosApi from '../api/productos.api.js';
 
-// Buscador predictivo del encabezado (ronda 2, ver docs/frontend-diseno.md):
-// sugerencias desde la primera letra, teclado completo, y una respuesta
+// Buscador predictivo del encabezado: sugerencias desde la primera letra,
+// teclado completo y una respuesta
 // vieja que nunca debe reemplazar sugerencias de una consulta más reciente.
 vi.mock('../api/productos.api.js', () => ({
   default: { sugerencias: vi.fn() },

@@ -12,9 +12,8 @@ import './MiCuenta.css';
 const formateador = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' });
 const formateadorFecha = new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' });
 
-// Dirección guardada (ronda 2, ver docs/frontend-diseno.md): "los clientes
-// existentes deben poder completar la dirección posteriormente" — esta es
-// esa vía. Muestra un resumen si ya hay una guardada (con "Editar"), o el
+// Los clientes existentes pueden completar posteriormente la dirección.
+// Muestra un resumen si ya hay una guardada (con "Editar"), o el
 // formulario directo si todavía no hay ninguna.
 const SeccionDireccion = () => {
   const { datos: direccion, cargando, error, recargar } = useCargaDatos(

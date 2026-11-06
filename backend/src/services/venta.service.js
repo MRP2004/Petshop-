@@ -26,8 +26,7 @@ import {
 } from '../utils/ventaValidaciones.js';
 import { esPersonalInterno, esCompradorRegistrado } from '../utils/roles.js';
 
-// Interpretación propuesta (pendiente de confirmación de Mauro, ver
-// docs/estado-proyecto.md): "ventas por proveedor" son las que incluyen al
+// "Ventas por proveedor" son las que incluyen al
 // menos un producto de ese proveedor, ya que Venta no tiene una relación
 // directa con Proveedor (una misma venta puede mezclar productos de varios).
 const obtenerIdsVentaPorProveedor = async (idProveedor) => {
@@ -49,7 +48,7 @@ const obtenerIdsVentaPorProveedor = async (idProveedor) => {
   return filas.map((fila) => fila.idVenta);
 };
 
-// pago/comprobante (CU-04) son opcionales: solo existen para ventas creadas
+// pago/comprobante son opcionales: solo existen para ventas creadas
 // por el checkout con pago simulado (compra.service.js), no para las
 // cargadas manualmente por el personal (registrarVenta, más abajo) ni para
 // ventas anteriores a esta etapa — VentaDetalle.jsx (frontend) decide qué
@@ -95,9 +94,7 @@ const relacionesVenta = [
     required: false,
   },
   {
-    // Historial de solicitudes de cancelación del cliente (CU-04,
-    // corrección — "quede registrada para que vendedor o administrador
-    // pueda verla"): casi siempre vacío o con una sola fila; se incluye
+    // Historial de solicitudes de cancelación del cliente: se incluye
     // completo (no solo la pendiente) para que la pantalla también pueda
     // mostrar una ya rechazada, en vez de una segunda consulta aparte.
     model: SolicitudCancelacion,
@@ -246,13 +243,8 @@ const registrarVenta = async (datos, usuario) => {
         throw new AppError('El cliente indicado no existe', 400);
       }
 
-      // Lock coherente con compra.service.js#resolverMedioPagoSimulado
-      // (revisión de diseño, Codex — CU-04, ronda de correcciones): la
-      // carga manual del personal comprobaba `habilitado` pero sin
-      // bloquear la fila, así que una deshabilitación concurrente durante
-      // la misma ventana no quedaba cubierta. Mismo orden de locks que el
-      // checkout (medio de pago antes que los productos, bloqueados más
-      // abajo en este mismo bucle).
+      // Se bloquea el medio de pago para evitar cambios concurrentes
+      // mientras se valida `habilitado`.
       const medioPago = await MedioPago.findByPk(idMedioPago, {
         transaction,
         lock: transaction.LOCK.UPDATE,
@@ -375,8 +367,8 @@ const registrarVenta = async (datos, usuario) => {
 // Lógica transaccional compartida entre la cancelación directa del personal
 // (cancelarVenta, abajo) y la aprobación de una solicitud de cancelación del
 // cliente (solicitudCancelacion.service.js#resolverSolicitudCancelacion) —
-// CU-04, corrección: "al aprobar, reutilizá la cancelación transaccional
-// existente" (no dos implementaciones que puedan divergir). Asume que
+// La aprobación reutiliza la misma cancelación transaccional para evitar
+// mantener lógicas paralelas. Asume que
 // `venta` YA está bloqueada (SELECT...FOR UPDATE) y validada como
 // 'registrada' por quien llama: no repite ninguna de las dos cosas.
 const ejecutarCancelacionTransaccional = async (venta, transaction) => {
@@ -429,7 +421,7 @@ const ejecutarCancelacionTransaccional = async (venta, transaction) => {
     );
   }
 
-  // Reversión del pago simulado (CU-04), en la misma transacción que
+  // Reversión del pago simulado, en la misma transacción que
   // restituye el stock: si la venta viene del checkout con pago simulado
   // tiene una fila en Pago con estado 'aprobado_simulado'; se marca
   // 'revertido_simulado' acá. Ventas sin Pago (carga manual del personal,
@@ -489,9 +481,8 @@ const cerrarSolicitudesPendientesPorCambioDirecto = async (
   );
 };
 
-// Cancelación DIRECTA: exclusiva del personal (CU-04, corrección — revisión
-// de Mauro sobre la venta #20: "el cliente ya no puede ejecutar una
-// cancelación directa"). La ruta ya exige vendedor/administrador (ver
+// Cancelación directa exclusiva del personal. La ruta ya exige
+// vendedor/administrador (ver
 // venta.routes.js); este chequeo es defensa en profundidad para cualquier
 // llamada directa al servicio que se salteara la ruta. A diferencia de
 // marcarVentaComoEnviada (que no recibe usuario y confía en quien llama),
@@ -562,9 +553,8 @@ const cancelarVenta = async (id, usuario) => {
 // cancelarVenta, así que ambas operaciones se serializan sobre esa fila sin
 // necesidad de un orden adicional entre ellas.
 //
-// Ronda 2, Etapa 7 (diseño de esquema revisado con Codex ANTES de escribir
-// esto — ver docs/estado-proyecto.md): antes, esta función siempre pasaba
-// a 'enviada' sin importar el método de entrega real, así que un retiro en
+// Esta función distingue el método de entrega; antes, siempre pasaba
+// a 'enviada', así que un retiro en
 // sucursal terminaba mostrando el mismo estado que un envío a domicilio —
 // el defecto real que esta etapa corrige. Ahora bifurca por
 // `metodoEntrega`: 'envío a domicilio' → 'enviada' (sin cambios); 'retiro

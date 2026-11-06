@@ -4,8 +4,7 @@ import AppError from '../errors/AppError.js';
 // dígito verificador (algoritmo módulo 11 real, el mismo que usa AFIP para
 // emitir el número). Esto NO verifica que el CUIL/CUIT exista de verdad ni
 // que esté al día ante AFIP — no hay ninguna integración con un servicio
-// fiscal externo real en este proyecto. Documentado explícitamente: "no
-// verifica existencia fiscal real", ver docs/estado-proyecto.md.
+// fiscal externo real en este proyecto.
 //
 // Ponderadores fijos del algoritmo real: 5,4,3,2,7,6,5,4,3,2 sobre los
 // primeros 10 dígitos; el dígito 11 es el verificador. Casos especiales

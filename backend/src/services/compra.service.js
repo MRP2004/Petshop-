@@ -31,8 +31,7 @@ import {
 import Usuario from '../models/usuario.model.js';
 
 // Una cotización aceptada hace más de esto se considera vencida y exige
-// pedir una nueva, aunque los precios no hayan cambiado (ver CU-04, §4:
-// "comparen contra la cotización que el cliente aceptó").
+// pedir una nueva, aunque los precios no hayan cambiado.
 const TTL_COTIZACION_MS = 10 * 60 * 1000;
 
 const LONGITUD_MINIMA_CLAVE = 8;
@@ -69,10 +68,9 @@ const validarCotizacionAceptada = (valor) => {
 };
 
 // Contenido "comercial" de un intento de compra, para detectar si una misma
-// claveIdempotencia se reutiliza con datos distintos (CU-04, §6: "rechazar
-// el mismo identificador con un contenido comercial diferente"). Deliberadamente
+// claveIdempotencia se reutiliza con datos distintos. Deliberadamente
 // NO incluye el medio de pago simulado ni ningún dato de tarjeta (corrección
-// de una revisión independiente, Codex): "contenido comercial" es QUÉ se
+// de una revisión de diseño): "contenido comercial" es QUÉ se
 // compra (productos, cantidades, entrega), no CÓMO se paga. Si el hash
 // incluyera el medio de pago, recuperarse de una respuesta perdida (recargar
 // la página, ver claveIdempotencia.js) podía fallar con "clave usada con
@@ -128,8 +126,7 @@ const cotizacionEstaDesactualizada = (cotizacionRecalculada, cotizacionAceptada)
 
     if (!aceptada) return true;
 
-    // Se compara el desglose completo, no solo el precio final (CU-04, §6 —
-    // "pedir reconfirmación... aunque el total final coincida"): si el
+    // Se compara el desglose completo, no solo el precio final: si el
     // precio de lista o el monto de descuento cambiaron pero, por
     // coincidencia, el precio final resultante es el mismo, igual se exige
     // repasar el resumen — lo que el cliente aceptó incluye ESE desglose,
@@ -159,7 +156,7 @@ const esErrorDeContencionTransitoria = (error) =>
   ['ER_LOCK_DEADLOCK', 'ER_LOCK_WAIT_TIMEOUT'].includes(error?.original?.code);
 
 // Confirma una compra del checkout de cliente: cotiza, procesa el pago
-// simulado y registra la venta de forma atómica e idempotente (CU-04).
+// simulado y registra la venta de forma atómica e idempotente.
 // A diferencia de venta.service.js#registrarVenta (carga manual del
 // personal, sin pago ni idempotencia, sin tocar), esta función es
 // exclusiva del rol cliente.
@@ -533,8 +530,7 @@ const confirmarCompra = async (datos, usuario, opciones = {}) => {
 
   // Ronda 2, Etapa 8: un vendedor independiente sigue siendo comprador
   // (conserva su propio idCliente) — puede confirmar una compra igual que
-  // cualquier cliente. Ver docs/estado-proyecto.md, corrección de diseño
-  // tras la revisión de Codex.
+  // cualquier cliente.
   if (!esCompradorRegistrado(usuario?.rol)) {
     throw new AppError('Solo un cliente puede confirmar una compra', 403);
   }
@@ -570,9 +566,8 @@ const confirmarCompra = async (datos, usuario, opciones = {}) => {
         throw new AppError('El cliente indicado no existe', 400);
       }
 
-      // Patrón de idempotencia con bloqueo de fila (ver
-      // docs/cu04-checkout-pago.md, "Idempotencia", y la revisión de diseño
-      // de Codex): el INSERT...ON DUPLICATE KEY UPDATE + SELECT...FOR UPDATE,
+      // Patrón de idempotencia con bloqueo de fila: el
+      // INSERT...ON DUPLICATE KEY UPDATE + SELECT...FOR UPDATE,
       // dentro de la MISMA transacción, hace que una segunda solicitud
       // concurrente con la misma clave espere a que esta termine (commit o
       // rollback) antes de poder leer el resultado.
@@ -630,9 +625,8 @@ const confirmarCompra = async (datos, usuario, opciones = {}) => {
         datosDebito: datos.datosDebito,
       });
 
-      // Orden de bloqueos DENTRO de esta transacción, fijo y documentado
-      // (revisión de diseño, Codex — CU-04, ronda de correcciones): intento
-      // (ya bloqueado arriba) → medio de pago → productos (dentro de
+      // Orden de bloqueos DENTRO de esta transacción: intento (ya bloqueado
+      // arriba) → medio de pago → productos (dentro de
       // cotizar(), en orden de idProducto). Mismo orden en TODA solicitud
       // que pasa por acá, así que dos transacciones concurrentes nunca
       // pueden esperarse en un ciclo (deadlock) por este motivo.
@@ -727,15 +721,13 @@ const confirmarCompra = async (datos, usuario, opciones = {}) => {
 
 // El checkout de cliente resuelve el medio de pago del catálogo a partir del
 // tipo de pago simulado (no lo elige el cliente de una lista): busca por
-// nombre fijo, sembrado por sembrarDatosDemo.js/sembrarDatosE2E.js (ver
-// docs/cu04-checkout-pago.md, "Medios de pago simulados"). Si todavía no
+// nombre fijo, sembrado por sembrarDatosDemo.js/sembrarDatosE2E.js. Si todavía no
 // existe (base sin el seed actualizado), responde un 503 explícito en vez
 // de fallar la venta con un error de FK confuso.
 //
 // Se lee con lock (SELECT...FOR UPDATE, mismo patrón que Producto en
 // cotizacion.service.js — el nombre es único e indexado, ver
-// medioPago.model.js) y se comprueba `habilitado` (CU-04, ronda de
-// correcciones): antes esta comprobación no existía acá, así que una compra
+// medioPago.model.js) y se comprueba `habilitado`, así que una compra
 // nueva podía completarse con un medio de pago que el personal ya había
 // deshabilitado. El lock hace que, si alguien deshabilita el medio en el
 // mismo instante en que se está confirmando una compra, ambas operaciones
@@ -963,17 +955,16 @@ const procesarWebhookMercadoPago = async (req) => {
   });
 };
 
-// Consulta el resultado de un intento de compra por su clave (CU-04, §1:
-// recuperación tras perder la respuesta de una compra ya confirmada). Pura
+// Consulta el resultado de un intento de compra por su clave para recuperar
+// una compra ya confirmada. Pura
 // lectura, SIN transacción ni lock: nunca reemplaza el camino atómico de
 // confirmarCompra (arriba) — una segunda confirmación con la misma clave
 // SIEMPRE vuelve a pasar por el patrón INSERT...ON DUPLICATE KEY + SELECT...
 // FOR UPDATE, nunca se salta ese camino solo porque esta consulta no
 // encontró nada. "No encontrado" es intencionalmente ambiguo (puede ser que
-// el intento nunca existió, que se revirtió, o — en teoría — que la
-// transacción que lo creó todavía no comiteó) y el frontend nunca debe
-// interpretarlo como "no hay ningún conflicto posible": ver
-// docs/cu04-checkout-pago.md.
+// el intento nunca existió, que se revirtió, o que la transacción que lo creó
+// todavía no haya terminado) y el frontend nunca debe interpretarlo como
+// "no hay ningún conflicto posible".
 const consultarIntento = async (clave, usuario) => {
   if (!esCompradorRegistrado(usuario?.rol)) {
     throw new AppError(

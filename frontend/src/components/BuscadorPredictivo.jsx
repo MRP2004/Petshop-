@@ -6,8 +6,8 @@ import './BuscadorPredictivo.css';
 
 const formateador = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' });
 
-// Espera breve tras la última tecla antes de pedir sugerencias (ronda 2, ver
-// docs/frontend-diseno.md): ni una llamada por tecla, ni una demora
+// Espera breve tras la última tecla antes de pedir sugerencias: ni una
+// llamada por tecla, ni una demora
 // perceptible para quien escribe a velocidad normal.
 const ESPERA_DEBOUNCE_MS = 250;
 
@@ -22,8 +22,7 @@ const ESPERA_DEBOUNCE_MS = 250;
 // (role="combobox"), las opciones se marcan como activas solo con
 // aria-activedescendant, y el popup no mezcla estados (cargando/error/sin
 // resultados) con role="option" — viven afuera del listbox, que solo
-// contiene opciones reales (corrección de la revisión de Codex de esta
-// etapa, ver docs/estado-proyecto.md).
+// contiene opciones reales.
 const BuscadorPredictivo = () => {
   const [busqueda, setBusqueda] = useState('');
   const [sugerencias, setSugerencias] = useState([]);

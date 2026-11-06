@@ -241,7 +241,7 @@ describe('Checkout', () => {
     expect(screen.queryByText('pantalla-comprobante')).not.toBeInTheDocument();
   });
 
-  // --- Recuperación tras perder la respuesta (CU-04, §1) ---
+  // --- Recuperación tras perder la respuesta ---
 
   it('con un intento guardado ya aprobado, navega directo al comprobante sin volver a cotizar', async () => {
     localStorage.setItem(

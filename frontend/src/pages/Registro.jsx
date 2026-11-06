@@ -23,8 +23,7 @@ const Registro = () => {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
 
-  // Ronda 2 (dirección argentina + Georef, ver docs/frontend-diseno.md): la
-  // cuenta se crea PRIMERO (email/password/nombre/apellido, sin cambios), y
+  // La cuenta se crea primero (email/password/nombre/apellido), y
   // la dirección es un paso SEPARADO después, opcional — no se puede meter
   // el <DireccionForm> adentro de este <form> (HTML no permite forms
   // anidados), y de todos modos el pedido es explícito: "los clientes

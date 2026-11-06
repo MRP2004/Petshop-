@@ -27,7 +27,7 @@ const marcarComoEnviada = (id) => solicitar(`/ventas/${id}/enviar`, { metodo: 'P
 
 const marcarComoEntregada = (id) => solicitar(`/ventas/${id}/entregar`, { metodo: 'PATCH' });
 
-// Comprobante (CU-04): PDF descargable y reenvío de correo, protegidos por
+// Comprobante: PDF descargable y reenvío de correo, protegidos por
 // la misma regla "propia o personal" que ver la venta (backend).
 const descargarComprobantePdf = (id) => solicitarBinario(`/ventas/${id}/comprobante/pdf`);
 

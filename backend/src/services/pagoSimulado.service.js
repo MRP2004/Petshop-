@@ -1,6 +1,6 @@
 import AppError from '../errors/AppError.js';
 
-// Pago simulado (CU-04, §5): NO hay pasarela real, QR ni transferencia
+// Pago simulado: no hay pasarela real, QR ni transferencia
 // efectiva — todo lo que sigue es una simulación local y determinista.
 //
 // Transferencia: siempre se considera aprobada (no requiere datos de

@@ -3,8 +3,7 @@ import sequelize from '../config/database.js';
 import Usuario from './usuario.model.js';
 
 // Tienda de un vendedor independiente (ronda 2, Etapa 8 — marketplace):
-// tabla NUEVA, gratis vía sync() — sin ALTER TABLE. Diseño de esquema
-// revisado con Codex antes de escribir esto (ver docs/estado-proyecto.md).
+// tabla nueva, creada vía sync() sin ALTER TABLE.
 // `idUsuario` es único: un dueño, una tienda (no hay "equipos" de
 // vendedores compartiendo una tienda en este alcance). `tipoDocumento`/
 // `estado` son STRING validados en la capa de aplicación (no ENUM de

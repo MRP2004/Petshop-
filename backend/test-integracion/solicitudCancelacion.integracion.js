@@ -1,5 +1,5 @@
 // Pruebas de integración real contra MySQL para la solicitud de cancelación
-// del cliente (CU-04, corrección — revisión de Mauro sobre la venta #20):
+// del cliente:
 // el cliente ya no cancela directamente (ver compra.integracion.js), pide la
 // cancelación y el personal la aprueba o la rechaza. Requiere petshop_test
 // ya preparada (ver docs/backend-base-de-datos.md) y NO corre con `npm test`.

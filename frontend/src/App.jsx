@@ -42,8 +42,8 @@ import PanelMisVentas from './pages/panel/PanelMisVentas.jsx';
 import Promociones from './pages/Promociones.jsx';
 
 const ROLES_PERSONAL = ['vendedor', 'administrador'];
-// Ronda 2, Etapa 8: un vendedor independiente sigue siendo comprador
-// (checkout, favoritos, mis compras) — ver docs/estado-proyecto.md.
+// Un vendedor independiente también puede comprar, guardar favoritos y
+// consultar sus compras.
 const ROLES_COMPRADOR = ['cliente', 'vendedor_independiente'];
 // `/panel` es compartido (personal interno Y vendedor independiente), pero
 // cada sección interna adentro sigue exigiendo ROLES_PERSONAL de forma

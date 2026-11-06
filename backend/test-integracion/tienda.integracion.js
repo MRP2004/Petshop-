@@ -1,7 +1,6 @@
 // Prueba de integración real contra petshop_test. No se ejecuta con `npm test`.
 // Marketplace: vendedores independientes (ronda 2, Etapa 8) — diseño de
-// esquema y autorización revisado con Codex ANTES de escribir el modelo o
-// la migración (ver docs/estado-proyecto.md).
+// esquema y autorización validados para el modelo y la migración.
 import { test, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
@@ -122,8 +121,8 @@ test('resolverSolicitudVendedor (aprobar): crea la Tienda y cambia el rol, todo 
 
   const usuarioActualizado = await Usuario.findByPk(cliente.idUsuario);
   assert.equal(usuarioActualizado.rol, 'vendedor_independiente');
-  // Conserva idCliente (hallazgo real de Codex, ver docs/estado-proyecto.md):
-  // sigue siendo comprador, no se pierde su identidad de cliente.
+  // Conserva idCliente: sigue siendo comprador y mantiene su identidad de
+  // cliente.
   assert.equal(usuarioActualizado.idCliente, cliente.idCliente);
 
   const tienda = await Tienda.findOne({ where: { idUsuario: cliente.idUsuario } });

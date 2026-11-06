@@ -2,10 +2,8 @@ import { useId, useRef, useState } from 'react';
 import atraparTab from '../utils/atraparTab.js';
 import './AjustarStockDialog.css';
 
-// Reemplaza el window.prompt/window.alert que tenía "Ajustar stock" (ronda
-// 2, ver docs/frontend-diseno.md): un prompt no puede mostrar el stock
-// actual ni el resultado antes de guardar, y un valor inválido solo se
-// avisaba después de escribirlo. Acá se ve todo antes de confirmar. La
+// El diálogo muestra el stock actual y el resultado antes de guardar; un
+// valor inválido se avisa antes de confirmar. La
 // validación real (que el resultado no sea negativo, entre otras) sigue
 // siendo del backend (ver producto.service.js#ajustarStockProducto,
 // transaccional con bloqueo de fila) — esto es solo una vista previa para

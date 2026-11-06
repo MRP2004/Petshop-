@@ -1,5 +1,5 @@
 // Pruebas de integración real contra MySQL para el checkout con pago
-// simulado (CU-04): cotización, confirmación atómica, idempotencia,
+// simulado: cotización, confirmación atómica, idempotencia,
 // concurrencia, cancelación e histórico inmutable. Mismo criterio que
 // ventaConcurrencia.integracion.js: requieren petshop_test ya preparada
 // (ver docs/backend-base-de-datos.md) y NO corren con `npm test`.
@@ -55,7 +55,7 @@ before(async () => {
 
 beforeEach(async () => {
   await limpiarDatos();
-  cliente = await crearClienteDePrueba({ email: 'cliente-cu04@petshop.test' });
+  cliente = await crearClienteDePrueba({ email: 'cliente-checkout@petshop.test' });
   // idUsuario real (no un literal inventado): desde la Etapa 6 (avisos in-app,
   // ronda 2), confirmarCompra crea un Aviso con FK real a usuario.idUsuario —
   // un idUsuario que no existiera en la base haría fallar la inserción del
@@ -671,7 +671,7 @@ test('envío a domicilio: se persiste la dirección junto con la compra confirma
   assert.equal(venta.direccionEntrega.direccion, 'Calle Falsa 123, piso 4');
 });
 
-// --- Medios de pago deshabilitados (CU-04, ronda de correcciones) ---
+// --- Medios de pago deshabilitados ---
 
 test('medio de pago deshabilitado: una compra NUEVA se rechaza, sin crear venta, pago, comprobante ni descontar stock', async () => {
   await MedioPago.update({ habilitado: false }, { where: { nombre: 'Transferencia bancaria (simulada)' } });
@@ -730,7 +730,7 @@ test('sembrado no reactiva un medio de pago deshabilitado (buscarOCrear no lo to
   assert.equal(encontrada.habilitado, false, 'seguía deshabilitada');
 });
 
-// --- Límite del total monetario (CU-04, ronda de correcciones) ---
+// --- Límite del total monetario ---
 
 test('total exactamente en el límite de DECIMAL(10,2) se acepta', async () => {
   const producto = await crearProductoDePrueba({ precio: '99999999.99', stockActual: 1 });
@@ -782,7 +782,7 @@ test('varias líneas individualmente válidas cuyo total sigue dentro del límit
   assert.equal(cotizacion.totalCentavos, 600000); // 3 productos x 2 unidades x $1000
 });
 
-// --- Contrato transaccional del proveedor de precios (CU-04, §6, ronda de correcciones) ---
+// --- Contrato transaccional del proveedor de precios ---
 
 test('el proveedor de precios recibe la transacción activa y el MISMO instante de evaluación para todas las líneas', async () => {
   const productoA = await crearProductoDePrueba({ precio: '100.00', stockActual: 10 });
@@ -828,7 +828,7 @@ test('el proveedor de precios recibe la transacción activa y el MISMO instante 
   }
 });
 
-// --- Instantánea histórica del comprador (CU-04, §4, ronda de correcciones) ---
+// --- Instantánea histórica del comprador ---
 
 test('editar el nombre/correo del cliente después de comprar no altera el comprobante ya emitido', async () => {
   const producto = await crearProductoDePrueba({ precio: '500.00', stockActual: 5 });
@@ -849,11 +849,11 @@ test('editar el nombre/correo del cliente después de comprar no altera el compr
   const ventaReleida = await obtenerVentaPorId(venta.idVenta, usuarioCliente);
   assert.equal(ventaReleida.comprobante.nombreCompradorHistorico, 'Cliente');
   assert.equal(ventaReleida.comprobante.apellidoCompradorHistorico, 'DePrueba');
-  assert.equal(ventaReleida.comprobante.correoCompradorHistorico, 'cliente-cu04@petshop.test');
+  assert.equal(ventaReleida.comprobante.correoCompradorHistorico, 'cliente-checkout@petshop.test');
   assert.notEqual(ventaReleida.comprobante.correoCompradorHistorico, 'nuevo-correo@petshop.test');
 });
 
-// --- Recuperación tras perder la respuesta: consultarIntento (CU-04, §1) ---
+// --- Recuperación tras perder la respuesta: consultarIntento ---
 
 test('consultarIntento: una compra aprobada se puede consultar por su clave, con el idVenta correcto', async () => {
   const producto = await crearProductoDePrueba({ precio: '500.00', stockActual: 5 });

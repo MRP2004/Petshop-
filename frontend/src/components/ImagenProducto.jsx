@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import obtenerIconoProducto from '../utils/iconoProducto.js';
 
-// Corrección de esta etapa (ver docs/frontend-diseno.md, "Imágenes de
-// producto"): si el producto tiene una URL de imagen real cargada desde el
+// Si el producto tiene una URL de imagen cargada desde el
 // panel (backend/src/services/producto.service.js#prepararUrlImagen), se
 // muestra esa imagen. Si no tiene ninguna, o si la URL cargada no llega a
 // cargar (servidor externo caído, enlace roto — un estado que antes no se

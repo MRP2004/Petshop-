@@ -3,8 +3,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import AppError from '../errors/AppError.js';
 
-// Dirección argentina estructurada (ronda 2, ver docs/frontend-diseno.md):
-// las 24 provincias son prácticamente estáticas, así que se embeben acá
+// Dirección argentina estructurada: las 24 provincias son prácticamente
+// estáticas, así que se embeben acá
 // como JSON versionado (bajado UNA vez de la API real de Georef —
 // https://apis.datos.gob.ar/georef/api/provincias — no inventado), en vez
 // de pedirlas cada vez.

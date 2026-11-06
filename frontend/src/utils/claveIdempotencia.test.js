@@ -1,4 +1,4 @@
-// Pruebas directas del módulo (CU-04, corrección — revisión independiente):
+// Pruebas directas del módulo:
 // antes solo se probaba indirectamente a través de Checkout.test.jsx, que
 // no llegaba a cubrir el escenario exacto reportado (localStorage.setItem
 // lanza, localStorage.getItem sigue funcionando y devuelve null, y

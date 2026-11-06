@@ -137,9 +137,8 @@ describe('AvisosContext', () => {
   });
 });
 
-// Hallazgo real de Codex en FavoritosContext (ver estado-proyecto.md,
-// Decimoquinta corrección): aplicado acá desde el principio — cambiar de
-// cuenta sin desmontar la SPA debía recargar los avisos, no dejar viendo los
+// Cambiar de cuenta sin desmontar la SPA debe recargar los avisos, no dejar
+// al usuario viendo los
 // de la cuenta anterior.
 const PanelDeCambioDeCuenta = () => {
   const { iniciarSesion } = useAuth();

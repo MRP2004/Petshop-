@@ -1,5 +1,4 @@
-// No hay fotos de producto reales (no se fabricó ninguna: ver
-// docs/frontend-diseno.md, "pendiente de alcance"). Mientras tanto, en vez
+// Mientras no haya fotos de producto, en vez
 // de un mismo ícono genérico para cualquier producto, se elige uno acorde a
 // su categoría (a partir de datos que la API ya devuelve, no inventados),
 // para que el catálogo se distinga visualmente por tipo de producto, más

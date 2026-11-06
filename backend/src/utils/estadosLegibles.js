@@ -1,5 +1,5 @@
 // Traducción de estados internos a etiquetas legibles para personas
-// (CU-04, ronda de correcciones): los valores de ENUM (pago.estado,
+// Los valores de ENUM (pago.estado,
 // venta.estado, comprobante.estadoCorreo) se conservan tal cual para la
 // lógica (comparaciones, transiciones); esto es solo para lo que ve un
 // humano en el PDF, el correo o la pantalla. Un estado sin traducción

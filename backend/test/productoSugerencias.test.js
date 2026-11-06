@@ -6,8 +6,8 @@ import app from '../src/app.js';
 import sequelize from '../src/config/database.js';
 import { obtenerSugerenciasBusqueda } from '../src/services/producto.service.js';
 
-// Buscador predictivo del encabezado (ronda 2, ver docs/frontend-diseno.md):
-// GET /api/productos/sugerencias, público. Igual que
+// Buscador predictivo del encabezado: GET /api/productos/sugerencias,
+// público. Igual que
 // productoEntradasInvalidas.test.js, se protege que un término vacío/ausente
 // no toque la base en absoluto (el servicio corta antes con un `return []`) y
 // que un tipo de dato inválido se rechace también antes de tocarla. El caso

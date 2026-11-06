@@ -2,7 +2,7 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
 import Venta from './venta.model.js';
 
-// Solicitud de cancelación de un cliente sobre su propia compra (CU-04,
+// Solicitud de cancelación de un cliente sobre su propia compra:
 // corrección — revisión de Mauro sobre la venta #20): desde esta corrección,
 // el cliente ya NO puede cancelar directamente (ver
 // venta.service.js#cancelarVenta); en su lugar, pide la cancelación y queda

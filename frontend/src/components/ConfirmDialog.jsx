@@ -2,8 +2,8 @@ import { useEffect, useId, useRef } from 'react';
 import atraparTab from '../utils/atraparTab.js';
 import './ConfirmDialog.css';
 
-// Diálogo de confirmación reutilizable (ronda 2, ver docs/frontend-diseno.md):
-// reemplaza los `window.confirm` que había en GestionEntidad.jsx (borrar un
+// Diálogo de confirmación reutilizable que reemplaza los `window.confirm`
+// que había en GestionEntidad.jsx (borrar un
 // registro) y VentaDetalle.jsx (cancelar venta, aprobar solicitud de
 // cancelación) — un `window.confirm` no puede mostrar el detalle de la
 // operación (qué venta, qué consecuencias) ni queda deshabilitado mientras

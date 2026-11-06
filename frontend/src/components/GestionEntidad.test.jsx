@@ -3,8 +3,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import GestionEntidad from './GestionEntidad.jsx';
 
-// Ronda 2 (ver docs/frontend-diseno.md): reemplaza el `window.confirm`/
-// `window.alert` que tenía "Eliminar" por el ConfirmDialog reutilizable —
+// Reemplaza el `window.confirm`/`window.alert` que tenía "Eliminar" por el
+// ConfirmDialog reutilizable —
 // esto es justamente lo que antes no se podía probar con facilidad (mockear
 // window.confirm no deja probar un error de la API sin cerrar el diálogo).
 const columnas = [{ clave: 'nombre', etiqueta: 'Nombre' }];

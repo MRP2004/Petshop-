@@ -1,12 +1,9 @@
-// Procedimiento de migración versionado e idempotente para la Etapa 7 de
-// la ronda 2 ("estados de pedido: retiro vs. envío" — ver
-// docs/estado-proyecto.md). Diseño de esquema revisado con Codex ANTES de
-// escribir este archivo (ver EVIDENCIA-codex-etapa7-diseno-revision.txt en
-// el ZIP de entrega de esta etapa).
+// Migración versionada e idempotente para ampliar los estados de pedido
+// según el método de entrega.
 //
 // Único cambio: AMPLIAR (nunca angostar) el ENUM `venta.estado` de 3 a 5
 // valores. Es 100% aditivo — a diferencia de
-// `migracionCU04Ronda2.js#migrarEstadoCorreo` (que sí necesitó un UPDATE
+// la migración del estado de correo (que sí necesitó un UPDATE
 // para resolver una ambigüedad de datos), acá no hace falta reescribir
 // ninguna fila: toda venta que hoy tiene `estado='enviada'` (bajo la
 // semántica vieja, sin importar si en los hechos era retiro o envío) sigue

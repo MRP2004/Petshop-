@@ -51,7 +51,7 @@ const confirmar = async (req, res, next) => {
   }
 };
 
-// Recuperación tras perder la respuesta (CU-04, §1): consulta de solo
+// Recuperación tras perder la respuesta: consulta de solo
 // lectura, nunca sustituye el camino atómico de `confirmar` — ver
 // compra.service.js#consultarIntento.
 const consultarIntentoPorClave = async (req, res, next) => {

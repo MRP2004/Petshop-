@@ -179,7 +179,7 @@ const sembrar = async () => {
     telefono: '3410000000',
   });
 
-  // Los dos últimos son los que usa el checkout de pago simulado (CU-04):
+  // Los dos últimos son los que usa el checkout de pago simulado:
   // ver compra.service.js#obtenerIdMedioPagoSimulado, que los busca por
   // este nombre exacto.
   const [efectivo] = await Promise.all([

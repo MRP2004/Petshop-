@@ -1,6 +1,6 @@
 // Genera 4 PDF de muestra (compra simple, con descuento, cancelada, y con
 // suficientes líneas para ocupar varias páginas) para revisar visualmente
-// el diseño del comprobante (CU-04, §7) sin necesitar una base de datos ni
+// el diseño del comprobante sin necesitar una base de datos ni
 // una compra real. No escribe nada en ningún lado más que los 4 archivos de
 // salida.
 //

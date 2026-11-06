@@ -274,15 +274,13 @@ Prueba de regresión: `test/ventaDescuentoAutorizacion.test.js`.
 La misma distinción se aplica a **listar** (`GET /api/ventas`: un cliente
 solo ve las suyas, sin importar qué filtros mande en la query) y **ver el
 detalle** (`GET /api/ventas/:id`: 403 si no es propia y no es personal).
-**Cancelar** (`PATCH /api/ventas/:id/cancelar`) y "marcar como enviada" son,
-en cambio, exclusivos de personal (corrección — revisión de Mauro sobre la
-venta #20: "el cliente ya no puede ejecutar una cancelación directa", tanto
-en la ruta como en el servicio, ver `venta.service.js#cancelarVenta`); un
-cliente que quiere cancelar su propia compra usa
-`POST /api/solicitudes-cancelacion` en su lugar (ver
-[cu04-checkout-pago.md](cu04-checkout-pago.md), "Solicitud de cancelación"),
-y el personal la aprueba o la rechaza con
-`PATCH /api/solicitudes-cancelacion/:id/aprobar`/`/rechazar`.
+**Cancelar** (`PATCH /api/ventas/:id/cancelar`) y "marcar como enviada" son
+operaciones exclusivas de personal. Un cliente que quiere cancelar su
+propia compra usa `POST /api/solicitudes-cancelacion` en su lugar,
+y el personal la aprueba o la rechaza con las rutas
+`PATCH /api/solicitudes-cancelacion/:id/aprobar` y
+`PATCH /api/solicitudes-cancelacion/:id/rechazar`. El flujo está descrito
+en [casos-de-uso.md](casos-de-uso.md).
 
 ## Matriz de rutas protegidas
 

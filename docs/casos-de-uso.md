@@ -86,12 +86,9 @@ sin que la venta se haya creado, ni viceversa.
 (persistencia real, stock insuficiente, dos ventas concurrentes sin
 sobreventa — el bloqueo de privilegios de MySQL que impedía crear
 `petshop_test` está resuelto, ver
-[backend-base-de-datos.md](backend-base-de-datos.md); la ejecución real
-depende de completar la contraseña local, ver
-[estado-proyecto.md](estado-proyecto.md) para el resultado más reciente),
+[backend-base-de-datos.md](backend-base-de-datos.md)),
 `e2e/recorrido-completo.spec.js` (extremo a extremo, contra la instancia
-aislada de E2E, ver [frontend-pruebas.md](frontend-pruebas.md) — mismo
-estado de ejecución que arriba).
+aislada de E2E, ver [frontend-pruebas.md](frontend-pruebas.md)).
 
 **Ejemplo**: iniciar sesión como `cliente@petshop.demo`, agregar "Pelota de
 goma resistente" al carrito, confirmar con "Efectivo" → la venta aparece en
@@ -151,8 +148,7 @@ y restitución exacta, rollback real después de escrituras, doble
 cancelación concurrente), `test-integracion/compra.integracion.js`
 (el propio cliente NO puede cancelar directamente),
 `e2e/recorrido-completo.spec.js` (el personal cancela una venta cargada
-manualmente, con la confirmación explícita) — ver
-[estado-proyecto.md](estado-proyecto.md) para el resultado más reciente.
+manualmente, con la confirmación explícita).
 
 **Ejemplo**: sobre una venta cargada manualmente por el personal, "Cancelar
 venta" (con la confirmación aceptada) → el estado pasa a `cancelada` y el
@@ -266,7 +262,7 @@ estado distinto de `registrada` → `409`; sin rol de personal → `403`.
 **Transacción y bloqueo**: mismo mecanismo que `cancelarVenta`, sobre la
 misma fila de `Venta`: así una cancelación y un envío concurrentes sobre la
 misma venta no pueden tener éxito los dos (antes de esta corrección, sí era
-posible — ver `docs/estado-proyecto.md`).
+posible).
 
 **Pruebas que lo demuestran**: `test-integracion/ventaConcurrencia.integracion.js`
 (cancelar/enviar concurrentes con contención real confirmada),

@@ -356,8 +356,7 @@ test('marcar como enviada cambia el estado; enviar o cancelar de nuevo se rechaz
 
 // Ronda 2, Etapa 7 (estados de pedido): marcarVentaComoEnviada bifurca por
 // metodoEntrega; marcarVentaComoEntregada es la única vía hacia el estado
-// final real. Diseño de esquema revisado con Codex antes de escribir esto
-// — ver docs/estado-proyecto.md.
+// final real.
 test('registrada + envío a domicilio: marcarVentaComoEnviada pasa a "enviada" (sin cambios)', async () => {
   const producto = await crearProductoDePrueba({ stockActual: 10 });
   const venta = await registrarVenta({

@@ -30,7 +30,6 @@
   /* Sin separación (margin-top) respecto del botón: un hueco ahí dispara
      mouseleave del contenedor (ver NavDropdown.jsx) antes de que el mouse
      llegue al menú, cerrándolo de golpe al bajar en línea recta — hallazgo
-     real de la revisión de Codex de esta ronda (ver estado-proyecto.md).
      El padding-top de acá adentro da el mismo respiro visual sin ese hueco
      muerto. */
   position: absolute;

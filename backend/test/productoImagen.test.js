@@ -1,6 +1,5 @@
-// Corrección de esta etapa (imágenes de producto, ver
-// docs/frontend-diseno.md): antes, el catálogo solo podía mostrar un ícono
-// por categoría, sin ninguna forma de cargar una imagen real por producto.
+// Antes, el catálogo solo podía mostrar un ícono por categoría, sin
+// ninguna forma de cargar una imagen real por producto.
 // Se agregó una tabla nueva relacionada (`imagenproducto`, 1 a 1 opcional
 // con `producto` — mismo criterio que direccionEntrega con venta, ver
 // docs/backend-base-de-datos.md), en vez de una columna agregada a

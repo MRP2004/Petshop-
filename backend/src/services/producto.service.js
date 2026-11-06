@@ -64,8 +64,7 @@ const relaciones = [
 // parámetros de consulta, sin permitir un valor arbitrariamente largo.
 const LONGITUD_MAXIMA_URL_IMAGEN = 300;
 
-// No hay fotos de producto reales fabricadas para esta entrega (ver
-// docs/frontend-diseno.md): esto no guarda un archivo ni lo aloja, solo
+// Esto no guarda ni aloja archivos; solo
 // valida y persiste una URL que el personal carga a mano (por ejemplo, la
 // foto que ya publica un proveedor). Se exige http(s) explícito para
 // descartar valores que claramente no son una URL (evita que alguien cargue
@@ -499,8 +498,8 @@ const obtenerMarcasCatalogo = async () => {
   return facetas.map((fila) => fila.marca);
 };
 
-// Buscador predictivo del encabezado (ronda 2, ver docs/frontend-diseno.md):
-// endpoint público y liviano, separado del listado general (que sigue sin
+// Buscador predictivo del encabezado: endpoint público y liviano, separado
+// del listado general (que sigue sin
 // tocarse: lo usa el filtrado del catálogo que trabajan los compañeros).
 // Límite de longitud generoso pero acotado (evita una consulta LIKE sobre
 // una cadena arbitrariamente larga); término vacío o ausente devuelve []

@@ -1,8 +1,7 @@
-// Intento de compra en curso (CU-04): se guarda en localStorage, asociado a
+// Intento de compra en curso: se guarda en localStorage, asociado a
 // un usuario y a una "firma" del carrito (qué productos y cantidades), para
 // poder recuperarse de una respuesta perdida o de recargar la página sin
-// generar una segunda compra ni perder la entrega elegida (ver
-// docs/cu04-checkout-pago.md, "Recuperación tras perder la respuesta").
+// generar una segunda compra ni perder la entrega elegida.
 // NUNCA guarda datos de pago (ni tipo, ni tarjeta): eso se vuelve a pedir
 // siempre que hace falta un intento nuevo.
 //
@@ -197,8 +196,7 @@ const obtenerOCrearClave = (idCliente, detalles, entrega = {}) => {
 // Reinicia el intento en curso para este usuario/carrito: usado cuando un
 // intento anterior se resolvió (aprobado, ya no hace falta) o cuando el
 // cliente elige explícitamente "iniciar un nuevo intento" tras un rechazo
-// (CU-04, §1: "un intento rechazado debe permitir comenzar otro intento de
-// manera explícita" — nunca automático).
+// El cliente debe iniciar explícitamente un nuevo intento tras un rechazo.
 const limpiarClave = () => {
   respaldoEnMemoria = null;
   try {

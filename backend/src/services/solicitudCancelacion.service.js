@@ -7,13 +7,11 @@ import { ejecutarCancelacionTransaccional, obtenerVentaPorId } from './venta.ser
 import { notificarPersonal, notificarClientePorIdCliente, TIPOS_AVISO } from './aviso.service.js';
 import { esCompradorRegistrado, esPersonalInterno } from '../utils/roles.js';
 
-// Solicitud de cancelación del cliente sobre su propia compra (CU-04,
-// corrección — revisión de Mauro sobre la venta #20): NO modifica la venta,
+// Solicitud de cancelación del cliente sobre su propia compra: no modifica la venta,
 // el pago ni el stock — solo deja registrada la intención, para que el
 // personal la apruebe o la rechace (ver resolverSolicitudCancelacion, más
 // abajo). Distinta de una devolución de un pedido ya entregado: esta acción
-// exige que la venta siga 'registrada' (ver docs/cu04-checkout-pago.md,
-// "Solicitud de cancelación vs. devolución").
+// exige que la venta siga 'registrada'.
 const solicitarCancelacion = async (idVentaCrudo, usuario) => {
   // Ronda 2, Etapa 8 (marketplace): un vendedor independiente sigue siendo
   // comprador (conserva su propio idCliente, ver usuario.model.js) — puede
@@ -54,7 +52,7 @@ const solicitarCancelacion = async (idVentaCrudo, usuario) => {
       );
     }
 
-    // Sin solicitudes duplicadas (CU-04, corrección): al estar ya
+    // Sin solicitudes duplicadas: al estar ya
     // serializado por el lock de arriba, este SELECT ve cualquier solicitud
     // pendiente que otra transacción concurrente ya haya comiteado, sin
     // necesitar su propio lock.
@@ -88,7 +86,7 @@ const solicitarCancelacion = async (idVentaCrudo, usuario) => {
   return obtenerVentaPorId(idVenta, usuario);
 };
 
-// Aprueba o rechaza una solicitud pendiente (CU-04, corrección): exclusivo
+// Aprueba o rechaza una solicitud pendiente: exclusivo
 // de vendedor/administrador (ver solicitudCancelacion.routes.js, que además
 // exige el rol en la ruta — defensa en profundidad, mismo criterio que
 // cancelarVenta). Al aprobar, reutiliza EXACTAMENTE la misma cancelación
@@ -135,7 +133,7 @@ const resolverSolicitudCancelacion = async (idSolicitudCrudo, decision, usuario,
       lock: transaction.LOCK.UPDATE,
     });
 
-    // Decisiones repetidas (CU-04, corrección): una solicitud ya resuelta
+    // Decisiones repetidas: una solicitud ya resuelta
     // (por otra transacción que ganó la carrera, o por una llamada anterior)
     // nunca vuelve a decidirse.
     if (solicitudBloqueada.estado !== 'pendiente') {

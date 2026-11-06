@@ -44,16 +44,8 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true,
-    // Content-Disposition (CU-04, ronda de correcciones): un defecto real,
-    // encontrado al agregar una prueba E2E que verifica la descarga
-    // efectiva del PDF del comprobante, no solo que el botón exista.
-    // Content-Disposition NO es un header "seguro" para CORS por defecto
-    // (a diferencia de Content-Type o Content-Length): sin exponerlo acá,
-    // el navegador SÍ lo recibía del servidor, pero JavaScript del frontend
-    // no podía leerlo con `response.headers.get(...)` en un pedido
-    // cross-origin (frontend y backend en puertos distintos) — la descarga
-    // funcionaba, pero siempre con el nombre de archivo genérico de
-    // respaldo del frontend, nunca con el número de comprobante real.
+    // Permite que el frontend lea el nombre del archivo enviado en
+    // Content-Disposition durante una descarga cross-origin.
     exposedHeaders: ['Content-Disposition'],
   }),
 );
@@ -76,27 +68,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Corrección (revisión independiente): `entorno`, arriba, es solo el valor
-// de una variable de entorno — si a alguien se le fuera la mano editando
-// .env.e2e y DB_NAME terminara apuntando a otra base, este endpoint
-// seguiría diciendo "e2e" sin que nadie lo notara. Este SÍ hace una
-// consulta real a la base ya conectada (SELECT DATABASE()/CURRENT_USER(),
-// mismo patrón que server.js y scripts/sembrarDatosE2E.js) para que
-// frontend/e2e/globalSetupAislamiento.js pueda confirmar, antes de correr
-// cualquier prueba, contra qué base y con qué usuario está conectada de
-// verdad la instancia que el frontend va a usar — no solo cómo se
-// autodenomina. Separado de /api/health (que debe seguir sin depender de
-// la base, para no romper las pruebas del backend que corren sin MySQL,
-// ver .github/workflows/backend-tests.yml).
-//
-// Corrección (revisión posterior): expone nombre de base y usuario de
-// conexión — no son credenciales, pero tampoco hace falta que cualquier
-// instancia (desarrollo, producción) los conteste. Habilitado SOLO cuando
-// ENTORNO=e2e, que es el único caso que lo necesita (ver
-// globalSetupAislamiento.js). Responde 404, igual que una ruta que no
-// existe (rutaNoEncontrada, error.middleware.js), sin llegar a consultar
-// la base — así "fuera de E2E no debe consultar ni exponer" se cumple de
-// forma literal, no solo devolviendo un error distinto.
+// En E2E permite comprobar la base y el usuario efectivos de la conexión.
+// La ruta está deshabilitada en los demás entornos y /api/health no depende
+// de MySQL.
 app.get('/api/health/aislamiento', async (req, res) => {
   if (process.env.ENTORNO !== 'e2e') {
     return res.status(404).json({ error: 'Ruta no encontrada' });
@@ -112,10 +86,8 @@ app.get('/api/health/aislamiento', async (req, res) => {
       usuarioConexion: fila.usuarioConexion,
     });
   } catch (error) {
-    // Corrección (revisión independiente): error.message NO viaja en la
-    // respuesta (ruta pública, sin autenticación) — un mensaje de Sequelize
-    // podría filtrar detalles operativos de la conexión real. Se registra
-    // en el log del servidor, que sí es de confianza.
+    // El detalle del error queda en los logs y no se expone en esta ruta
+    // pública.
     console.error('Fallo al confirmar la base de datos efectiva:', error.message);
     res.status(503).json({
       error: 'No se pudo confirmar la base de datos efectiva.',

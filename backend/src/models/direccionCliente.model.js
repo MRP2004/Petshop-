@@ -2,9 +2,7 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
 import Cliente from './cliente.model.js';
 
-// Dirección argentina estructurada del cliente (ronda 2, ver
-// docs/frontend-diseno.md y docs/estado-proyecto.md, revisión de diseño de
-// Codex antes de escribir este modelo). Tabla NUEVA, no columnas agregadas
+// Dirección argentina estructurada del cliente. Tabla nueva, no columnas agregadas
 // a `cliente` (mismo motivo que direccionEntrega/imagenProducto: sync()
 // crea tablas nuevas sin tocar las existentes; agregar columnas a una
 // tabla ya creada necesitaría una migración manual — ver

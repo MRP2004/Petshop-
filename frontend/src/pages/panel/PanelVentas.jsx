@@ -17,10 +17,9 @@ const pedirFiltros = () =>
     proveedores,
   }));
 
-// Listado de ventas filtrado por cliente o proveedor (requisito de la
-// propuesta). El filtro por proveedor es una interpretación propuesta y
-// pendiente de confirmación (ver docs/estado-proyecto.md): ventas que
-// incluyen al menos un producto de ese proveedor, porque Venta no tiene una
+// Listado de ventas filtrado por cliente o proveedor. El filtro por
+// proveedor muestra ventas que incluyen al menos un producto de ese
+// proveedor, porque Venta no tiene una
 // relación directa con Proveedor.
 const PanelVentas = () => {
   const { datos: filtrosDisponibles } = useCargaDatos(useCallback(() => pedirFiltros(), []));
@@ -81,7 +80,7 @@ const PanelVentas = () => {
             </thead>
             <tbody>
               {ventas.map((venta) => {
-                // CU-04, corrección: visibilidad rápida de una solicitud
+                // Visibilidad rápida de una solicitud
                 // pendiente sin tener que abrir cada venta una por una (ver
                 // VentaDetalle.jsx para aprobarla/rechazarla).
                 const tieneSolicitudPendiente = (venta.solicitudesCancelacion || []).some(

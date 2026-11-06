@@ -7,8 +7,8 @@ import { MAXIMO_ENTERO_POSITIVO, validarEnteroEnRango } from '../utils/validacio
 const validarIdProducto = (idProducto) =>
   validarEnteroEnRango(idProducto, 1, MAXIMO_ENTERO_POSITIVO, 'El ID del producto no es válido');
 
-// Favoritos persistentes por cuenta (ronda 2, ver docs/frontend-diseno.md):
-// siempre "los propios" — `idCliente` viene de `req.usuario.idCliente`
+// Favoritos persistentes por cuenta: siempre "los propios" —
+// `idCliente` viene de `req.usuario.idCliente`
 // (la sesión), nunca de la URL ni del cuerpo, mismo criterio que
 // direccionCliente.service.js para no depender de ocultar nada en el
 // frontend (real impedimento del lado del servidor, no solo UI).

@@ -44,8 +44,7 @@ const leerCookieCsrf = () => {
   return coincidencia ? decodeURIComponent(coincidencia[1]) : null;
 };
 
-// Límite de tiempo por pedido (revisión independiente, Codex — CU-04, ronda
-// de correcciones): sin esto, una conexión que queda "colgada" (ni
+// Límite de tiempo por pedido: sin esto, una conexión que queda "colgada" (ni
 // resuelve ni falla) dejaba pantallas como la recuperación del checkout
 // (ver Checkout.jsx, "Verificando tu compra…") esperando indefinidamente,
 // sin mensaje de error ni forma de reintentar. Un timeout se trata igual
@@ -160,7 +159,7 @@ const solicitar = (ruta, { metodo = 'GET', cuerpo } = {}) =>
     return datos;
   });
 
-// Descarga binaria (el PDF del comprobante, CU-04): a diferencia de
+// Descarga binaria (el PDF del comprobante): a diferencia de
 // solicitar(), no intenta interpretar la respuesta como JSON — ni en el
 // caso de éxito (devuelve un Blob) ni en el de error (igual intenta leer
 // { error } si el backend respondió JSON, para un mensaje legible).

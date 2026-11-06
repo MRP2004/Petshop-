@@ -1,10 +1,5 @@
 # Actualizar una base existente (por ejemplo, `petshop_db`) al código actual
 
-Esta guía es para Mauro, para actualizar **a mano** su base de desarrollo
-`petshop_db`. En esta ronda no se tocó `petshop_db`: el procedimiento se
-ensayó completo sobre `petshop_test` (ver "Qué se ensayó de verdad" al
-final), no sobre `petshop_db`.
-
 ## Por qué hace falta
 
 El backend solo crea tablas **nuevas** al arrancar (`sequelize.sync()` sin

@@ -1,6 +1,6 @@
 import { solicitar } from './httpClient.js';
 
-// Solicitud de cancelación (CU-04, corrección): recurso propio, no anidado
+// Solicitud de cancelación: recurso propio, no anidado
 // bajo /ventas (mismo criterio que compras.api.js) — ver
 // backend/src/routes/solicitudCancelacion.routes.js.
 const crear = (idVenta) => solicitar('/solicitudes-cancelacion', { metodo: 'POST', cuerpo: { idVenta } });

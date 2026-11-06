@@ -4,8 +4,7 @@ import categoriasApi from '../api/categorias.api.js';
 import useCargaDatos from '../hooks/useCargaDatos.js';
 import './Footer.css';
 
-// Reescrito para la ronda 1 de rediseño visual (ver docs/frontend-diseno.md):
-// las columnas de categorías y de mascota son enlaces reales a filtros que
+// Las columnas de categorías y de mascota son enlaces reales a filtros que
 // funcionan (misma API que usa el catálogo), no texto suelto. No hay
 // enlaces sociales ni newsletter: ninguno de los dos existe todavía, y
 // mostrarlos sin destino real sería prometer algo que la app no ofrece.

@@ -93,8 +93,8 @@ const crearUsuarioInterno = async (datos) => {
   };
 };
 
-// Ronda 2 (ver docs/frontend-diseno.md): el encabezado necesita mostrar el
-// nombre de quien inició sesión, algo que el token JAMÁS lleva (ver
+// El encabezado necesita mostrar el nombre de quien inició sesión, algo
+// que el token no lleva (ver
 // firmarToken: "el token solo lleva lo necesario para autorizar") — a
 // propósito, para no arrastrar un nombre desactualizado si el cliente edita
 // su perfil después de loguearse, y para no agrandar el token con datos que

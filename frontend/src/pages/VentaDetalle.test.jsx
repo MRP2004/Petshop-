@@ -8,7 +8,7 @@ import ventasApi from '../api/ventas.api.js';
 import solicitudCancelacionApi from '../api/solicitudCancelacion.api.js';
 import * as authApi from '../api/auth.api.js';
 
-// Corrección (CU-04, revisión de Mauro sobre la venta #20): el cliente ya no
+// El cliente no puede cancelar directamente una venta:
 // puede cancelar directamente (ver venta.service.js#cancelarVenta) — estas
 // pruebas cubren el reemplazo ("Solicitar cancelación") y la resolución por
 // el personal (aprobar/rechazar), incluida la confirmación explícita antes
@@ -227,8 +227,7 @@ describe('VentaDetalle — cancelación restringida al personal, solicitud del c
 });
 
 // Ronda 2, Etapa 7 (estados de pedido: retiro vs. envío) — diseño de
-// esquema revisado con Codex antes de escribir el modelo/migración (ver
-// docs/estado-proyecto.md).
+// estados de pedido según el método de entrega.
 describe('VentaDetalle — estados de pedido (retiro vs. envío, Etapa 7)', () => {
   it('registrada + retiro en sucursal: el personal ve "Marcar lista para retirar" (no "Marcar como enviada")', async () => {
     iniciarSesionComo(USUARIO_VENDEDOR);

@@ -10,8 +10,8 @@ import { etiquetaEstadoPago, etiquetaEstadoVenta, etiquetaEstadoCorreo } from '.
 import './VentaDetalle.css';
 
 const formateador = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' });
-// hour12:false y timeZone explícitos (CU-04, ronda de correcciones — misma
-// corrección que backend/src/utils/formato.js): no depender del reloj de
+// hour12:false y timeZone explícitos, como en backend/src/utils/formato.js:
+// no depender del reloj de
 // 12 horas por defecto de la configuración regional, ni de la zona horaria
 // del dispositivo, para que la hora coincida con la que muestra el PDF.
 const formateadorFecha = new Intl.DateTimeFormat('es-AR', {
@@ -33,8 +33,7 @@ const formateadorFecha = new Intl.DateTimeFormat('es-AR', {
 // "Terminada en" en vez del número completo: es lo único que persiste el
 // backend del pago simulado (ver backend/src/models/pago.model.js) — nunca
 // hay un número completo que mostrar acá, ni falta que hace.
-// Mismo criterio que el PDF/correo (CU-04, ronda de correcciones — revisión
-// independiente, Codex): si el cliente edita su nombre después de comprar,
+// Mismo criterio que el PDF/correo: si el cliente edita su nombre después de comprar,
 // esta pantalla no debe mostrar un nombre distinto del que ya tiene
 // impreso el comprobante de ESA MISMA venta — usa la instantánea histórica
 // cuando existe (comprobantes emitidos por el checkout desde esta
@@ -52,9 +51,8 @@ const descripcionMedioPago = (venta) => {
   return 'Transferencia simulada';
 };
 
-// Solicitud de cancelación (CU-04, corrección — revisión de Mauro sobre la
-// venta #20: "el cliente ya no puede ejecutar una cancelación directa"): la
-// más reciente manda, tanto para saber si hay una pendiente (bloquea una
+// Solicitud de cancelación: la más reciente manda, tanto para saber si hay
+// una pendiente (bloquea una
 // solicitud nueva, ver backend/src/services/solicitudCancelacion.service.js)
 // como para mostrarle al cliente el motivo si la última fue rechazada.
 const ultimaSolicitud = (venta) => {
@@ -77,8 +75,7 @@ const VentaDetalleContenido = ({ id }) => {
   const [avisoCorreo, setAvisoCorreo] = useState(null);
   const [solicitandoCancelacion, setSolicitandoCancelacion] = useState(false);
   const [resolviendoSolicitud, setResolviendoSolicitud] = useState(false);
-  // Ronda 2: reemplaza los window.confirm de cancelar/aprobar por
-  // ConfirmDialog (ver docs/frontend-diseno.md). null = ningún diálogo
+  // Usa ConfirmDialog para cancelar/aprobar. null = ningún diálogo
   // abierto; 'cancelar'/'aprobar' identifican cuál. El error de la acción
   // confirmada se muestra DENTRO del diálogo (no cierra solo si falla, así
   // se puede reintentar sin perder el contexto), separado de errorAccion
@@ -133,11 +130,8 @@ const VentaDetalleContenido = ({ id }) => {
     setErrorConfirmacion(null);
   };
 
-  // Cancelación DIRECTA: exclusiva del personal desde esta corrección (ver
-  // backend/src/services/venta.service.js#cancelarVenta) — con confirmación
-  // explícita antes de ejecutarla (CU-04, corrección: "agregá una
-  // confirmación visible antes de ejecutar esa acción"), mismo patrón que
-  // GestionEntidad.jsx#eliminar (ConfirmDialog, no window.confirm — ronda 2).
+  // Cancelación directa exclusiva del personal, con confirmación explícita
+  // antes de ejecutarla, siguiendo el patrón GestionEntidad.jsx#eliminar.
   const pedirCancelar = () => {
     setErrorConfirmacion(null);
     setConfirmacion('cancelar');
@@ -290,12 +284,10 @@ const VentaDetalleContenido = ({ id }) => {
       {errorAccion && <EstadoError mensaje={errorAccion} />}
       {avisoCorreo && <p className="venta-detalle__aviso-correo">{avisoCorreo}</p>}
 
-      {/* Solicitud de cancelación (CU-04, corrección): visible para el
+      {/* Solicitud de cancelación: visible para el
           cliente dueño (su propia solicitud) y para el personal (para
           poder resolverla, ver los botones más abajo). No es una
-          devolución de un pedido ya entregado — ver
-          docs/cu04-checkout-pago.md, "Solicitud de cancelación vs.
-          devolución": esa es una acción distinta, que todavía no existe. */}
+          devolución de un pedido ya entregado. */}
       {solicitudPendiente && (
         <p className="venta-detalle__aviso-solicitud">
           Solicitud de cancelación {esCliente ? 'enviada, pendiente de revisión' : 'pendiente de tu revisión'}

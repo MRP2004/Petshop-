@@ -279,7 +279,7 @@ test('registrarVenta rechaza una dirección de entrega que no sea una cadena de 
     // género con "La dirección de entrega". Es un detalle preexistente del
     // mensaje genérico (no introducido acá) que no se corrigió en esta
     // etapa para no tener que revisar el mensaje exacto de las demás
-    // pruebas que dependen de él; queda registrado en docs/estado-proyecto.md.
+    // pruebas que dependen de él.
     (error) => error.statusCode === 400 && error.message === 'La dirección de entrega no es válido',
   );
 });

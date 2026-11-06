@@ -4,7 +4,7 @@ import { requiereAutenticacion, requiereRol } from '../middlewares/autenticacion
 
 const router = Router();
 
-// Solicitar la cancelación de la propia compra (CU-04, corrección): el
+// Solicitar la cancelación de la propia compra: el
 // cliente ya no puede cancelar directamente (ver venta.routes.js#cancelar,
 // ahora exclusiva de vendedor/administrador). idVenta viaja en el cuerpo,
 // no en la URL: este es un recurso propio ("solicitudes de cancelación"),

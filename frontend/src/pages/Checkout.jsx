@@ -11,9 +11,8 @@ import { TARJETAS_DEBITO_SIMULADAS } from '../utils/tarjetasSimuladas.js';
 import './Checkout.css';
 
 // Dirección guardada -> un único string legible para pre-llenar el campo
-// de texto libre del checkout (que sigue siendo texto libre, sin cambios
-// de backend — ver docs/estado-proyecto.md, revisión de diseño de esta
-// etapa): "permitir corregir o elegir otra" se resuelve dejando ese texto
+// de texto libre del checkout (que sigue siendo texto libre): "permitir
+// corregir o elegir otra" se resuelve dejando ese texto
 // totalmente editable, no con una lista de direcciones para elegir.
 const formatearDireccionGuardada = (direccion) => {
   if (!direccion) return '';
@@ -51,13 +50,13 @@ const validarCamposDebito = (datosDebito) => {
   return errores;
 };
 
-// Checkout de cliente con pago simulado (CU-04): cotiza contra el backend
+// Checkout de cliente con pago simulado: cotiza contra el backend
 // (nunca confía en el precio mostrado en el carrito), pide transferencia o
 // débito simulados, y reconfirma automáticamente si la cotización aceptada
 // quedó desactualizada (precio o promoción cambiaron) antes de registrar
 // nada.
 //
-// Recuperación tras perder la respuesta (CU-04, §1, ronda de correcciones):
+// Recuperación tras perder la respuesta:
 // antes de exigir una cotización nueva, si hay un intento guardado para
 // este usuario y este carrito (ver utils/claveIdempotencia.js), se consulta
 // su resultado (GET /api/compras/intentos/:clave, de solo lectura — NUNCA

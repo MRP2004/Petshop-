@@ -1,13 +1,11 @@
-// Verificación (no una suite automática) de que migracionCU04Ronda2.js
-// aplica correctamente sobre un esquema PREVIO (el de la primera entrega de
-// CU-04: ENUM viejo, sin instantánea del comprador, sin índice único en
+// Verificación (no una suite automática) de que la migración de columnas
+// aplica correctamente sobre un esquema PREVIO (ENUM viejo, sin instantánea del comprador, sin índice único en
 // mediopago.nombre) preservando los datos ya cargados, y de que correrla dos
 // veces es seguro (idempotente). Nunca contra petshop_db — ver
 // docs/backend-base-de-datos.md.
 //
-// Uso:
-//   cd backend
-//   DOTENV_CONFIG_PATH=.env.test node scripts/verificarMigracionCU04Ronda2.js
+// Usa la configuración de .env.test y solo se ejecuta contra la base
+// permitida para integración.
 import 'dotenv/config';
 import sequelize from '../src/config/database.js';
 import { aplicarMigracionCU04Ronda2, ENUM_FINAL } from './migracionCU04Ronda2.js';
@@ -28,8 +26,8 @@ const asegurarBasePermitida = async () => {
 };
 
 // Recrea, con SQL crudo, el esquema previo relevante (mediopago sin índice
-// único, comprobante con el ENUM y las columnas de la primera entrega de
-// CU-04), y carga datos "ya existentes" para comprobar que sobreviven.
+// único y comprobante con el ENUM y las columnas anteriores), y carga datos
+// "ya existentes" para comprobar que sobreviven.
 const prepararEsquemaPrevio = async () => {
   // FK checks desactivadas solo durante este DROP/CREATE puntual: la base
   // de pruebas puede tener otras tablas (direccionentrega, etc.) con FKs
@@ -86,7 +84,7 @@ const prepararEsquemaPrevio = async () => {
     )
   `);
 
-  // ENUM y columnas de la PRIMERA entrega de CU-04 (sin 'simulado' ni
+  // ENUM y columnas anteriores (sin 'simulado' ni
   // instantánea del comprador): el estado que esta migración debe llevar al
   // final.
   await sequelize.query(`
@@ -175,7 +173,7 @@ const verificar = async () => {
   await sequelize.authenticate();
   await asegurarBasePermitida();
 
-  console.log('\n--- Preparando esquema PREVIO (primera entrega de CU-04), con datos ---');
+  console.log('\n--- Preparando esquema PREVIO, con datos ---');
   const contexto = await prepararEsquemaPrevio();
   console.log(`Datos previos cargados: venta #${contexto.idVenta}, comprobante 'enviado'.`);
 

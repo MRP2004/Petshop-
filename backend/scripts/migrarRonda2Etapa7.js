@@ -1,6 +1,6 @@
 // Script que Mauro corre UNA vez, a mano, contra su base de desarrollo real
 // (petshop_db), para aplicar la Etapa 7 de la ronda 2 (estados de pedido)
-// sin perder datos. Mismo patrón que migrarCU04Ronda2.js.
+// sin perder datos. Mismo patrón que la migración anterior.
 //
 // Uso:
 //   cd backend

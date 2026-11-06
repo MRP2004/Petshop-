@@ -2,7 +2,7 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
 import Venta from './venta.model.js';
 
-// Comprobante de una venta (CU-04): número único y estado del envío por
+// Comprobante de una venta: número único y estado del envío por
 // correo. Tabla nueva 1 a 1 con Venta, mismo motivo que pago.model.js (ver
 // ahí). Se crea junto con la Venta dentro de la misma transacción
 // (compra.service.js) — toda venta confirmada por el checkout tiene
@@ -26,7 +26,7 @@ const Comprobante = sequelize.define(
       unique: true,
     },
 
-    // Estados reales y distinguibles del envío (CU-04, ronda de correcciones
+    // Estados reales y distinguibles del envío
     // — antes 'enviado' se usaba tanto para un envío real aceptado por SMTP
     // como para un mensaje armado en memoria por el transporte de prueba, lo
     // que la interfaz mostraba como "enviado" sin haberlo estado nunca de
@@ -75,7 +75,7 @@ const Comprobante = sequelize.define(
       defaultValue: DataTypes.NOW,
     },
 
-    // Instantánea del comprador al momento de confirmar la compra (CU-04,
+    // Instantánea del comprador al momento de confirmar la compra
     // ronda de correcciones): antes, el PDF y el correo leían
     // venta.cliente.nombre/apellido/email, el dato ACTUAL y editable del
     // cliente — modificar el perfil después de comprar cambiaba lo que

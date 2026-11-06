@@ -2,9 +2,7 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
 import Producto from './producto.model.js';
 
-// Imagen real de un producto (corrección de esta etapa: ver
-// docs/frontend-diseno.md, "Imágenes de producto", y
-// producto.service.js#prepararUrlImagen). Igual que direccionEntrega.model.js,
+// Imagen real de un producto. Igual que direccionEntrega.model.js,
 // es una tabla NUEVA relacionada, no una columna agregada a `producto`: una
 // tabla nueva es segura con sync() (crea lo que falte, sin tocar tablas
 // existentes — ver docs/backend-base-de-datos.md), mientras que agregarle

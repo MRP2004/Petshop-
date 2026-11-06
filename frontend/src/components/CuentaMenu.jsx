@@ -2,8 +2,7 @@ import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import './CuentaMenu.css';
 
-// Menú de cuenta accesible (ronda 2, ver docs/frontend-diseno.md): antes
-// "Mi cuenta"/"Panel (rol)" eran enlaces sueltos junto al botón "Salir".
+// Menú de cuenta accesible: agrupa "Mi cuenta", "Panel (rol)" y "Salir".
 // Ahora un único desplegable muestra el nombre real de quien inició sesión
 // (o "Panel (rol)" para el personal, que no tiene un Cliente asociado — ver
 // usuario.service.js#construirPerfilPublico) y agrupa los destinos reales

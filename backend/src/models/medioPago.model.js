@@ -10,7 +10,7 @@ const MedioPago = sequelize.define(
       primaryKey: true,
     },
 
-    // Único (revisión de diseño, Codex — CU-04, ronda de correcciones):
+    // Único:
     // compra.service.js resuelve el medio de pago simulado buscando por
     // este nombre con SELECT...FOR UPDATE; sin una restricción única real en
     // la base, esa búsqueda no tiene un índice claro para bloquear (podría
@@ -18,7 +18,7 @@ const MedioPago = sequelize.define(
     // mismo nombre, cuál de las dos se bloquea/lee quedaría indefinido. Una
     // base existente con nombres ya duplicados necesita resolverlos antes de
     // poder aplicar esta restricción (ver migración en
-    // scripts/migrarCU04Ronda2.js).
+    // (ver los scripts de migración de la base de datos).
     nombre: {
       type: DataTypes.STRING(50),
       allowNull: false,

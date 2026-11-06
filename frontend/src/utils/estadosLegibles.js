@@ -1,5 +1,5 @@
-// Traducción de estados internos a etiquetas legibles (CU-04, ronda de
-// correcciones): copia equivalente de backend/src/utils/estadosLegibles.js
+// Traducción de estados internos a etiquetas legibles: copia equivalente de
+// backend/src/utils/estadosLegibles.js
 // — frontend y backend son paquetes separados sin código común (mismo
 // criterio que TARJETAS_DEBITO_SIMULADAS), así que se mantiene la misma
 // lista de etiquetas en los dos lugares.

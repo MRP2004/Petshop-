@@ -6,8 +6,8 @@ import './DireccionForm.css';
 
 const LIMITE_SUGERENCIAS_LOCALIDAD = 50;
 
-// Formulario de dirección argentina estructurada (ronda 2, ver
-// docs/frontend-diseno.md): provincia (select, 24 opciones estáticas) +
+// Formulario de dirección argentina estructurada: provincia (select, 24
+// opciones estáticas) +
 // localidad (combobox con filtro "empieza con" LOCAL) + calle/número
 // (obligatorios) + piso/indicaciones (opcionales). No verifica que la
 // vivienda exista — solo que la localidad elegida sea una real de Georef

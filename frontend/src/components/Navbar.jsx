@@ -15,15 +15,14 @@ import './Navbar.css';
 const RUTAS_ENCABEZADO_REDUCIDO = ['/iniciar-sesion', '/registro'];
 
 // Identidad, buscador, acceso a cuenta y carrito, más navegación por
-// mascota/categoría (ronda 1 de rediseño visual, ver docs/frontend-diseno.md).
+// mascota/categoría.
 // Los grupos adicionales se muestran únicamente cuando existen en la API.
 // Las marcas se consultan como filtro en Catálogo, a partir de los productos
 // publicados; no se anuncia un menú de marcas sin datos detrás.
 const Navbar = () => {
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
-  // Ronda 2: "Salir" ya no cierra la sesión directamente al hacer clic —
-  // primero pide confirmación (ver docs/frontend-diseno.md, "Menú de
-  // cuenta"). null-safe: solo importa mientras estaAutenticado es true.
+  // "Salir" pide confirmación antes de cerrar la sesión. null-safe: solo
+  // importa mientras estaAutenticado es true.
   // La confirmación pertenece a la sesión que la abrió; un cambio de cuenta
   // no debe hacer reaparecer el diálogo anterior.
   const [usuarioConfirmacionSalir, setUsuarioConfirmacionSalir] = useState(null);

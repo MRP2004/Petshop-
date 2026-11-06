@@ -5,8 +5,8 @@
    tablet (MD) y escritorio (LG). Breakpoints usados en todo el frontend:
    SM (por defecto, < 768px), MD (>= 768px), LG (>= 1024px).
 
-   Identidad visual (ronda 2 de rediseño, ver docs/frontend-diseno.md): misma
-   base que la ronda 1 (verde para acciones/precios, terracota reservado
+   Identidad visual: misma base que la ronda anterior (verde para
+   acciones/precios, terracota reservado
    exclusivamente para promociones vigentes) pero con fondo y texto más
    verdes y menos marrones ("más verde y cálida" — pedido explícito de esta
    ronda): fondo principal --color-fondo, un tono aún más suave
@@ -17,8 +17,7 @@
    sistema si no llegan a cargar.
 
    Cada color de acento tiene una variante "-oscuro" pensada para texto o
-   fondos sólidos con texto blanco encima (contraste real medido, no a
-   ojo — ver revisión de Codex en docs/estado-proyecto.md): blanco sobre
+   fondos sólidos con texto blanco encima (contraste medido): blanco sobre
    --color-marca da ~3.48:1 (no llega a AA para texto normal), blanco sobre
    --color-marca-oscuro da ~5:1 (sí); blanco/texto sobre --color-acento da
    ~3.12:1, sobre --color-acento-oscuro da ~4.64:1. La variante clara
@@ -29,8 +28,7 @@
    contra el nuevo fondo verde (texto-suave ~5.9:1 sobre --color-fondo y
    ~6.5:1 sobre blanco, ambos por encima de AA para texto normal).
 
-   --color-borde-interactivo (hallazgo real de la revisión de Codex de esta
-   ronda, ver docs/estado-proyecto.md): --color-borde por sí solo no llega
+   --color-borde-interactivo: --color-borde por sí solo no llega
    a 3:1 contra blanco/--color-fondo/--color-fondo-suave (da ~1.4-1.65:1),
    suficiente para un borde decorativo (tarjetas con sombra, separadores)
    pero no para WCAG 1.4.11 en un control donde el borde es lo único que

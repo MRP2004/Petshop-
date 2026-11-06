@@ -121,10 +121,9 @@ juntos); este endpoint sirve para que el personal cargue/edite clientes.
 | `PATCH /api/ventas/:id/cancelar` | Cualquier sesión, mismas reglas de pertenencia que ver el detalle. |
 | `PATCH /api/ventas/:id/enviar` | Solo `vendedor`/`administrador`. |
 
-**Filtro `?idProveedor=` en `GET /api/ventas`**: interpretación propuesta,
-pendiente de confirmación (`Venta` no tiene relación directa con
-`Proveedor`): devuelve las ventas que incluyen al menos un producto de ese
-proveedor. Ver [estado-proyecto.md](estado-proyecto.md).
+**Filtro `?idProveedor=` en `GET /api/ventas`**: `Venta` no tiene relación
+directa con `Proveedor`; el filtro devuelve las ventas que incluyen al
+menos un producto de ese proveedor.
 
 **`PATCH /api/ventas/:id/cancelar`**, caso de conflicto adicional: si
 restituir el stock de un producto superaría el rango de `INTEGER` firmado,
