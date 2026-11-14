@@ -17,12 +17,10 @@ const obtenerClave = () => {
 
 const DURACION_TOKEN = '8h';
 
-// El token solo lleva lo necesario para autorizar: id, rol, idCliente (si
-// aplica) e idTienda (ronda 2, Etapa 8 — marketplace: solo si aplica). Un
-// vendedor independiente conserva idCliente (sigue siendo comprador, ver
-// usuario.model.js) Y lleva idTienda (para poder autorizar por tienda sin
-// una consulta extra en cada pedido) — los dos campos pueden convivir en el
-// mismo token.
+// El token identifica la cuenta e incluye sus datos de sesión al momento de
+// emitirlo. En cada solicitud autenticada, el middleware usa idUsuario para
+// cargar el rol, idCliente e idTienda actuales desde la base; no autoriza con
+// los valores potencialmente desactualizados que quedaron en el token.
 const firmarToken = (usuario) =>
   jwt.sign(
     {

@@ -26,8 +26,9 @@ completo (roles, matriz de permisos, usuarios de prueba). Resumen rápido:
   deja la sesión en una cookie HttpOnly (el JWT **no** viaja en el cuerpo).
   Limitado a 8 intentos cada 15 minutos por IP+email.
 - `POST /api/usuarios/logout` — limpia la sesión (cookies).
-- `GET /api/usuarios/perfil` — requiere sesión, devuelve lo codificado en el
-  token (`{ idUsuario, rol, idCliente }`).
+- `GET /api/usuarios/perfil` — requiere sesión, devuelve el perfil actual
+  consultado en la base (`idUsuario`, rol, identificadores relacionados y
+  datos básicos del cliente).
 - `POST /api/usuarios` — requiere rol `administrador`, crea cuentas
   `vendedor`/`administrador`.
 - La sesión viaja por cookie (navegador) o `Authorization: Bearer <token>`
@@ -40,10 +41,10 @@ completo (roles, matriz de permisos, usuarios de prueba). Resumen rápido:
 
 ## Carrito persistente
 
-Todas las rutas requieren una sesión autenticada. Cada operación usa
-`idUsuario` del token; el cliente no puede elegir qué cuenta leer o
-modificar. Todos los roles tienen su propio carrito, pero ninguno puede
-acceder al carrito de otra cuenta.
+Todas las rutas requieren una sesión autenticada. El backend resuelve la
+cuenta vigente a partir del `idUsuario` de la sesión; el cliente no puede
+elegir qué cuenta leer o modificar. Todos los roles tienen su propio carrito,
+pero ninguno puede acceder al carrito de otra cuenta.
 
 | Ruta | Acción |
 |---|---|
@@ -106,7 +107,7 @@ navegación pública).
 `GET /api/clientes` (listado completo) y `POST`/`DELETE /api/clientes/:id`
 requieren `vendedor`/`administrador`. `GET`/`PUT /api/clientes/:id` los
 puede usar también el propio cliente autenticado, solo sobre su propio
-`idCliente` (comparado contra el del token); sobre cualquier otro id
+`idCliente` vigente de la cuenta autenticada; sobre cualquier otro id
 responde `403`. El alta de un cliente **con cuenta propia** no se hace por
 `POST /api/clientes` sino por `POST /api/usuarios/registro` (crea ambos
 juntos); este endpoint sirve para que el personal cargue/edite clientes.
