@@ -1,26 +1,49 @@
 // Carga datos ficticios suficientes para recorrer la aplicación (catálogo,
-// checkout, panel de gestión) en un ambiente de desarrollo local. No debe
-// ejecutarse contra una base de producción: usa sync() (no destructivo) y
-// hace upsert manual por nombre/email para poder correrse más de una vez sin
-// duplicar filas.
-//
-// Uso:
-//   cd backend
-//   node scripts/sembrarDatosDemo.js
-//
-// Las contraseñas impresas al final son SOLO para desarrollo local: no son
-// credenciales reales, no se guardan en ningún archivo del repositorio, y no
-// deben reutilizarse fuera de este propósito.
+// checkout, panel de gestión) en un ambiente de desarrollo local.
+// No debe ejecutarse contra una base de producción.
+// Las contraseñas de las cuentas demo se leen de backend/.env y no se
+// imprimen. Este seed está limitado a ambientes de desarrollo.
 import 'dotenv/config';
-import sequelize from '../src/config/database.js';
-import Categoria from '../src/models/categoria.model.js';
-import TipoMascota from '../src/models/tipoMascota.model.js';
-import Proveedor from '../src/models/proveedor.model.js';
-import MedioPago from '../src/models/medioPago.model.js';
-import Producto from '../src/models/producto.model.js';
-import Cliente from '../src/models/cliente.model.js';
-import Usuario from '../src/models/usuario.model.js';
 import { hashearContrasena } from '../src/utils/contrasenas.js';
+
+const obtenerCredencialesDemo = () => {
+  const entorno = (process.env.ENTORNO || '').trim().toLowerCase();
+  const nodeEnv = (process.env.NODE_ENV || '').trim().toLowerCase();
+  if (
+    nodeEnv === 'production' ||
+    ['production', 'produccion', 'producción', 'prod'].includes(entorno)
+  ) {
+    throw new Error('sembrar:demo está deshabilitado en ambientes de producción');
+  }
+
+  const credenciales = [
+    {
+      email: 'admin@petshop.demo',
+      password: process.env.SEED_ADMIN_PASSWORD,
+      rol: 'administrador',
+      variable: 'SEED_ADMIN_PASSWORD',
+    },
+    {
+      email: 'vendedor@petshop.demo',
+      password: process.env.SEED_VENDEDOR_PASSWORD,
+      rol: 'vendedor',
+      variable: 'SEED_VENDEDOR_PASSWORD',
+    },
+  ];
+  const passwordCliente = process.env.SEED_CLIENTE_PASSWORD;
+  const faltantes = [
+    ...credenciales
+      .filter(({ password }) => !password?.trim())
+      .map(({ variable }) => variable),
+    ...(!passwordCliente?.trim() ? ['SEED_CLIENTE_PASSWORD'] : []),
+  ];
+
+  if (faltantes.length > 0) {
+    throw new Error(`Faltan contraseñas en el entorno: ${faltantes.join(', ')}`);
+  }
+
+  return { credenciales, passwordCliente };
+};
 
 const buscarOCrear = async (Modelo, where, datosExtra = {}) => {
   const existente = await Modelo.findOne({ where });
@@ -31,6 +54,28 @@ const buscarOCrear = async (Modelo, where, datosExtra = {}) => {
 };
 
 const sembrar = async () => {
+  const { credenciales, passwordCliente } = obtenerCredencialesDemo();
+
+  const [
+    { default: sequelize },
+    { default: Categoria },
+    { default: TipoMascota },
+    { default: Proveedor },
+    { default: MedioPago },
+    { default: Producto },
+    { default: Cliente },
+    { default: Usuario },
+  ] = await Promise.all([
+    import('../src/config/database.js'),
+    import('../src/models/categoria.model.js'),
+    import('../src/models/tipoMascota.model.js'),
+    import('../src/models/proveedor.model.js'),
+    import('../src/models/medioPago.model.js'),
+    import('../src/models/producto.model.js'),
+    import('../src/models/cliente.model.js'),
+    import('../src/models/usuario.model.js'),
+  ]);
+
   await sequelize.authenticate();
   await sequelize.sync();
 
@@ -57,12 +102,6 @@ const sembrar = async () => {
   ]);
 
   // Medios de pago simulados del checkout de cliente: compra.service.js
-  // los busca por este nombre exacto para vincularlos a la Venta — el
-  // cliente no los elige de esta lista, elige "transferencia" o "débito" y
-  // el backend resuelve cuál de estos dos usar (ver
-  // No aparecen en la carga manual del
-  // personal ni en el checkout salvo por su nombre; no representan ninguna
-  // pasarela real.
   await Promise.all([
     buscarOCrear(
       MedioPago,
@@ -134,12 +173,7 @@ const sembrar = async () => {
   }
 
   // --- Usuarios de prueba (contraseñas ficticias, solo para desarrollo) ---
-  const credencialesDemo = [
-    { email: 'admin@petshop.demo', password: 'Demo1234Admin', rol: 'administrador' },
-    { email: 'vendedor@petshop.demo', password: 'Demo1234Vende', rol: 'vendedor' },
-  ];
-
-  for (const { email, password, rol } of credencialesDemo) {
+  for (const { email, password, rol } of credenciales) {
     const existente = await Usuario.findOne({ where: { email } });
     if (!existente) {
       await Usuario.create({
@@ -152,7 +186,6 @@ const sembrar = async () => {
   }
 
   const emailClienteDemo = 'cliente@petshop.demo';
-  const passwordClienteDemo = 'Demo1234Client';
   let usuarioCliente = await Usuario.findOne({ where: { email: emailClienteDemo } });
   if (!usuarioCliente) {
     const cliente = await Cliente.create({
@@ -164,18 +197,14 @@ const sembrar = async () => {
     });
     usuarioCliente = await Usuario.create({
       email: emailClienteDemo,
-      contrasenaHash: await hashearContrasena(passwordClienteDemo),
+      contrasenaHash: await hashearContrasena(passwordCliente),
       rol: 'cliente',
       idCliente: cliente.idCliente,
     });
   }
 
   console.log('Datos de demostración listos.');
-  console.log('');
-  console.log('Usuarios de prueba (SOLO desarrollo local, no son credenciales reales):');
-  console.log(`  Administrador -> admin@petshop.demo / Demo1234Admin`);
-  console.log(`  Vendedor      -> vendedor@petshop.demo / Demo1234Vende`);
-  console.log(`  Cliente       -> cliente@petshop.demo / Demo1234Client`);
+  console.log('Las contraseñas de las cuentas demo no se muestran.');
 
   await sequelize.close();
 };

@@ -307,9 +307,11 @@ en [casos-de-uso.md](casos-de-uso.md).
 ## Usuarios de prueba
 
 `backend/scripts/sembrarDatosDemo.js` (`npm run sembrar:demo`) crea tres
-cuentas de desarrollo con contraseñas ficticias, impresas en la consola al
-ejecutarlo — **no son credenciales reales** y no se versionan en ningún
-archivo:
+cuentas de desarrollo. Sus contraseñas se configuran localmente con
+`SEED_ADMIN_PASSWORD`, `SEED_VENDEDOR_PASSWORD` y `SEED_CLIENTE_PASSWORD`
+en `backend/.env`; el script no las imprime, no incluye valores
+predeterminados y no se ejecuta en producción. Si las cuentas ya existen,
+volver a ejecutar el seed no cambia sus contraseñas:
 
 - `admin@petshop.demo` (administrador)
 - `vendedor@petshop.demo` (vendedor)

@@ -77,10 +77,12 @@ npm run sembrar:demo
 
 Carga categorías, tipos de mascota, un proveedor, medios de pago, algunos
 productos (incluido uno con stock por debajo del mínimo, para ver la alerta)
-y tres usuarios de prueba (`administrador`, `vendedor`, `cliente`) con
-contraseñas ficticias que el script imprime en la consola — no son
-credenciales reales y no quedan en ningún archivo del repositorio. Es
-idempotente: correrlo de nuevo no duplica filas (busca por nombre/email
+y tres usuarios de prueba (`administrador`, `vendedor`, `cliente`). Antes
+de ejecutarlo, definir `SEED_ADMIN_PASSWORD`, `SEED_VENDEDOR_PASSWORD` y
+`SEED_CLIENTE_PASSWORD` en `backend/.env`; el script no tiene contraseñas
+predeterminadas, no imprime sus valores y se niega a ejecutarse en
+producción. Si una cuenta ya existe, el seed no cambia su contraseña.
+Es idempotente: correrlo de nuevo no duplica filas (busca por nombre/email
 antes de crear). Ver [backend-autenticacion.md](backend-autenticacion.md).
 
 ## Instancias aisladas (integración y E2E)
