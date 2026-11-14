@@ -96,8 +96,18 @@ const solicitarSerVendedor = async (datos, usuario) => {
 };
 
 const relacionesSolicitud = [
-  { model: Usuario, as: 'usuario', include: [{ model: Cliente, as: 'cliente' }] },
-  { model: Usuario, as: 'resolutor', required: false },
+  {
+    model: Usuario,
+    as: 'usuario',
+    attributes: { exclude: ['contrasenaHash'] },
+    include: [{ model: Cliente, as: 'cliente' }],
+  },
+  {
+    model: Usuario,
+    as: 'resolutor',
+    attributes: { exclude: ['contrasenaHash'] },
+    required: false,
+  },
 ];
 
 const listarSolicitudesVendedor = async (usuario) => {
@@ -223,7 +233,14 @@ const listarTiendas = async (usuario) => {
   }
 
   return Tienda.findAll({
-    include: [{ model: Usuario, as: 'usuario', include: [{ model: Cliente, as: 'cliente' }] }],
+    include: [
+      {
+        model: Usuario,
+        as: 'usuario',
+        attributes: { exclude: ['contrasenaHash'] },
+        include: [{ model: Cliente, as: 'cliente' }],
+      },
+    ],
     order: [['creadoEn', 'DESC']],
   });
 };
