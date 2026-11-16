@@ -94,25 +94,26 @@ const crearUsuarioInterno = async (datos) => {
 };
 
 // El encabezado necesita mostrar el nombre de quien inició sesión, algo
-// que el token no lleva (ver
-// firmarToken: "el token solo lleva lo necesario para autorizar") — a
-// propósito, para no arrastrar un nombre desactualizado si el cliente edita
-// su perfil después de loguearse, y para no agrandar el token con datos que
-// no hacen falta para autorizar nada. En vez de eso, tanto el login/registro
-// como GET /api/usuarios/perfil arman este mismo objeto con una consulta
-// fresca a la base (ver obtenerPerfil más abajo) — mismo shape en los dos
+// que el token no lleva — a propósito, para no arrastrar un nombre
+// desactualizado si el cliente edita su perfil después de loguearse, y para
+// no agrandar el token con datos que no hacen falta para autorizar nada. En
+// vez de eso, tanto el login/registro como GET /api/usuarios/perfil arman
+// este mismo objeto con una consulta fresca a la base (ver obtenerPerfil
+// más abajo) — mismo shape en los dos
 // casos, a propósito, para que el estado de sesión en el frontend no cambie
 // de forma según de dónde vino (login vs. recarga de página). `nombre`/
 // `apellido` quedan en null para vendedor/administrador (no tienen Cliente
 // asociado); `contrasenaHash` nunca se incluye.
 // Ronda 2, Etapa 8 (marketplace): un vendedor independiente puede tener
-// tienda SUSPENDIDA (ver tienda.service.js) sin dejar de ser vendedor — el
-// `idTienda` viaja igual (autoriza "esta cuenta es dueña de esa tienda"),
-// la suspensión se vuelve a comprobar en cada escritura real (nunca se
-// confía en esto solo para decidir si algo se puede escribir).
+// tienda SUSPENDIDA (ver tienda.service.js) sin dejar de ser vendedor. El
+// middleware carga el `idTienda` actual desde la base en cada solicitud
+// autenticada; la suspensión se vuelve a comprobar en cada escritura real.
 const resolverIdTienda = async (usuario) => {
   if (usuario.rol !== 'vendedor_independiente') return null;
-  const tienda = await Tienda.findOne({ where: { idUsuario: usuario.idUsuario } });
+  const tienda = await Tienda.findOne({
+    where: { idUsuario: usuario.idUsuario },
+    attributes: ['idTienda'],
+  });
   return tienda?.idTienda ?? null;
 };
 
@@ -189,4 +190,4 @@ const iniciarSesion = async (datos) => {
   return iniciarSesionConUsuario(usuario);
 };
 
-export { registrarUsuario, crearUsuarioInterno, iniciarSesion, obtenerPerfil };
+export { registrarUsuario, crearUsuarioInterno, iniciarSesion, obtenerPerfil, resolverIdTienda };

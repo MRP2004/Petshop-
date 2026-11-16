@@ -51,7 +51,8 @@ Con el backend y el frontend corriendo y los datos de ejemplo cargados:
 1. Abrir `http://localhost:5173`, navegar el catálogo (categorías, tipo de
    mascota, buscador) sin iniciar sesión.
 2. Ir a "Registrarse" y crear una cuenta nueva, o iniciar sesión con
-   `cliente@petshop.demo` (contraseña impresa por `sembrar:demo`).
+   `cliente@petshop.demo` (contraseña configurada como `SEED_CLIENTE_PASSWORD`
+   en `backend/.env` antes de correr `sembrar:demo`).
 3. Agregar productos al carrito, confirmar la compra (checkout), ver el
    número de operación y la compra en "Mi cuenta".
 4. Cancelar esa compra desde "Mi cuenta".

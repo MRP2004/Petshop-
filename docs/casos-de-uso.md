@@ -70,8 +70,8 @@ compartidas con las pruebas); `validarImportePersistido`,
 `prepararImporteOpcional` (`validacion.js`, compartidas con el resto de los
 CRUD). El frontend usa el **mismo** endpoint y servicio tanto para la
 compra pública como para la venta manual del panel: la única diferencia
-(de quién es el `idCliente`) la resuelve el backend según el rol del token,
-no hay dos implementaciones de la regla de negocio.
+(de quién es el `idCliente`) la resuelve el backend según el rol vigente de
+la cuenta. No hay dos implementaciones de la regla de negocio.
 
 **Transacción y bloqueo**: todo el registro ocurre dentro de
 `sequelize.transaction`, bloqueando cada `Producto` con `LOCK.UPDATE` en el

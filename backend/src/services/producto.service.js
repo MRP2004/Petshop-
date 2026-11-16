@@ -40,10 +40,6 @@ const relaciones = [
     as: 'tipoMascota',
   },
   {
-    model: Proveedor,
-    as: 'proveedor',
-  },
-  {
     model: ImagenProducto,
     as: 'imagen',
     required: false,

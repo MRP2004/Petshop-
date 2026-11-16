@@ -3,6 +3,8 @@ import { analizarCookies } from '../utils/cookies.js';
 import { coincideCsrf } from '../utils/csrf.js';
 import { NOMBRE_COOKIE_SESION, NOMBRE_COOKIE_CSRF } from '../utils/sesion.js';
 import { esPersonalInterno, esCompradorRegistrado } from '../utils/roles.js';
+import Usuario from '../models/usuario.model.js';
+import { resolverIdTienda } from '../services/usuario.service.js';
 
 const METODOS_MUTABLES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -32,9 +34,9 @@ const extraerCredenciales = (req) => {
   return { token: null, origen: null };
 };
 
-// Exige un usuario autenticado válido; deja sus datos en req.usuario
-// (idUsuario, rol, idCliente) para que controladores/servicios los usen.
-const requiereAutenticacion = (req, res, next) => {
+// Exige un usuario autenticado válido; el JWT identifica la cuenta, pero los
+// datos de autorización se cargan de nuevo para reflejar cambios recientes.
+const requiereAutenticacion = async (req, res, next) => {
   const { token, origen, csrfCookie } = extraerCredenciales(req);
 
   if (!token) {
@@ -53,12 +55,45 @@ const requiereAutenticacion = (req, res, next) => {
     }
   }
 
+  let identidadToken;
   try {
-    req.usuario = verificarToken(token);
-    return next();
+    identidadToken = verificarToken(token);
   } catch {
     return res.status(401).json({ error: 'La sesión no es válida o expiró' });
   }
+
+  if (
+    !identidadToken ||
+    typeof identidadToken !== 'object' ||
+    !Number.isInteger(identidadToken.idUsuario)
+  ) {
+    return res.status(401).json({ error: 'La sesión no es válida o expiró' });
+  }
+
+  let usuarioActual;
+  let idTienda;
+  try {
+    usuarioActual = await Usuario.findByPk(identidadToken.idUsuario, {
+      attributes: ['idUsuario', 'rol', 'idCliente'],
+    });
+
+    if (!usuarioActual) {
+      return res.status(401).json({ error: 'La sesión no es válida o expiró' });
+    }
+
+    idTienda = await resolverIdTienda(usuarioActual);
+  } catch (error) {
+    return next(error);
+  }
+
+  req.usuario = {
+    idUsuario: usuarioActual.idUsuario,
+    rol: usuarioActual.rol,
+    idCliente: usuarioActual.idCliente,
+    idTienda,
+  };
+
+  return next();
 };
 
 // Si hay una credencial válida la decodifica en req.usuario; si no hay, o es
@@ -79,8 +114,7 @@ const autenticacionOpcional = (req, res, next) => {
   return next();
 };
 
-// Debe usarse después de requiereAutenticacion. "Ocultar botones no es
-// autorización": esta es la comprobación real del lado del servidor.
+
 const requiereRol =
   (...rolesPermitidos) =>
   (req, res, next) => {
@@ -97,14 +131,7 @@ const requiereRol =
     return next();
   };
 
-// Para rutas de Cliente por :id: un cliente autenticado solo puede acceder a
-// su propio registro (comparando req.usuario.idCliente contra :id); el
-// personal (vendedor/administrador) accede a cualquiera. Debe usarse después
-// de requiereAutenticacion.
-//
-// Ronda 2, Etapa 8: un vendedor independiente TAMBIÉN puede acceder a su
-// propio registro de Cliente (conserva idCliente, sigue siendo comprador) —
-// mismo chequeo que 'cliente', nunca el de personal interno.
+
 const permitirPropioClienteOStaff = (req, res, next) => {
   if (esPersonalInterno(req.usuario?.rol)) {
     return next();

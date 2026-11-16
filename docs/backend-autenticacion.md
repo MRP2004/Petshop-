@@ -2,20 +2,23 @@
 
 ## Resumen
 
-El backend usa **JWT** (biblioteca `jsonwebtoken`) para sesiones sin estado y
-**scrypt** (`node:crypto`, sin agregar una dependencia nueva de hashing) para
-almacenar contraseñas. Hay tres roles:
+El backend usa **JWT** (biblioteca `jsonwebtoken`) para identificar la sesión.
+En cada solicitud autenticada, carga el usuario actual desde MySQL para
+autorizar con su rol vigente. Usa **scrypt** (`node:crypto`, sin agregar una
+dependencia nueva de hashing) para almacenar contraseñas. Hay cuatro roles:
 
 | Rol | Quién | Qué puede hacer |
 |---|---|---|
 | `cliente` | Cualquier persona que se registra públicamente | Comprar y consultar **únicamente sus propias** ventas; ver/editar su propio registro de Cliente. |
 | `vendedor` | Cuenta interna, creada por un administrador | Gestionar catálogo (productos, categorías, tipos de mascota, proveedores, medios de pago, promociones), stock, y **todas** las ventas (crear para cualquier cliente, cancelar, marcar como enviada). |
 | `administrador` | Cuenta interna, creada por otro administrador (o la primera, manualmente) | Todo lo de `vendedor`, más: crear cuentas internas (`vendedor`/`administrador`) vía `POST /api/usuarios`. |
+| `vendedor_independiente` | Cliente cuya solicitud para vender fue aprobada | Administrar su propia tienda y sus productos; conserva su cuenta e historial de comprador. |
 
-**"Ocultar botones no es autorización"**: el frontend usa el rol codificado
-en el token solo para decidir qué mostrar (mejor UX), pero la autorización
-real ocurre en el backend, en cada endpoint, con los middlewares
-`requiereAutenticacion` / `requiereRol` (`src/middlewares/autenticacion.middleware.js`).
+**"Ocultar botones no es autorización"**: el frontend puede usar el rol del
+perfil de sesión solo para decidir qué mostrar (mejor UX), pero la
+autorización real ocurre en el backend. `requiereAutenticacion` valida el
+JWT y carga el usuario actual desde la base; luego `requiereRol` compara el
+rol vigente (`src/middlewares/autenticacion.middleware.js`).
 Un intento de acceder a una acción no permitida responde `401` (sin sesión)
 o `403` (sesión válida, pero sin el rol necesario), nunca solo se "esconde"
 del lado del cliente.
@@ -24,12 +27,13 @@ del lado del cliente.
 
 `backend/src/models/usuario.model.js`: `idUsuario`, `email` (único),
 `contrasenaHash` (`"sal_hex:hash_hex"`, nunca la contraseña en texto plano),
-`rol` (`ENUM('cliente','vendedor','administrador')`), `idCliente` (FK
-opcional y única a `Cliente`; obligatoria solo cuando `rol='cliente'`).
+`rol` (`ENUM('cliente','vendedor','administrador','vendedor_independiente')`),
+`idCliente` (FK opcional y única a `Cliente`; se conserva para `cliente` y
+`vendedor_independiente`).
 
-Un usuario `cliente` siempre está vinculado 1 a 1 con un `Cliente`. Los
-usuarios `vendedor`/`administrador` no tienen `Cliente` asociado: no
-compran, gestionan el negocio.
+Un usuario `cliente` siempre está vinculado 1 a 1 con un `Cliente`.
+`vendedor_independiente` también conserva su `Cliente`; los roles internos
+`vendedor`/`administrador` no tienen `Cliente` asociado.
 
 ## Registro público vs. alta interna
 
@@ -64,16 +68,17 @@ dos cookies:
 
 | Cookie | HttpOnly | Contenido | Duración |
 |---|---|---|---|
-| `petshop_sesion` | Sí | El JWT (`{ idUsuario, rol, idCliente }`, sin email — ver más abajo) | 8 horas |
+| `petshop_sesion` | Sí | El JWT (`{ idUsuario, rol, idCliente, idTienda }`, sin email; solo `idUsuario` se usa para resolver la cuenta actual) | 8 horas |
 | `petshop_csrf` | No (a propósito) | Un valor aleatorio, para la protección CSRF (ver siguiente sección) | 8 horas |
 
-`GET /api/usuarios/perfil` devuelve el mismo payload decodificado del
-token: es cómo el frontend recupera "quién está logueado" al cargar la
-página (no puede leer la cookie directamente). El objeto `usuario` que
-devuelve el login es a propósito idéntico en forma al que devuelve
-`perfil` (`{ idUsuario, rol, idCliente }`, sin `email`): así el estado de
-sesión en React no cambia de forma según si vino de loguearse recién o de
-una recarga de página.
+`GET /api/usuarios/perfil` consulta la cuenta actual en la base: es cómo el
+frontend recupera "quién está logueado" al cargar la página (no puede leer
+la cookie directamente). El objeto `usuario` que devuelve el login tiene
+la misma forma que el perfil (`{ idUsuario, rol, idCliente, idTienda, email,
+nombre, apellido }`), así el estado de sesión en React no cambia según si
+vino de loguearse recién o de una recarga. Para autorizar pedidos
+posteriores, el backend vuelve a cargar el rol y los identificadores vigentes;
+los claims del JWT no son la fuente de autorización.
 
 `POST /api/usuarios/logout` limpia ambas cookies (`res.clearCookie`).
 
@@ -290,7 +295,7 @@ en [casos-de-uso.md](casos-de-uso.md).
 | `GET /api/productos/stock-bajo` | ❌ | ❌ | ✅ |
 | Escritura de productos/categorías/tipos de mascota/medios de pago/promociones | ❌ | ❌ | ✅ |
 | `GET`/`PUT /api/proveedores`, `/api/clientes` (listado completo) | ❌ | ❌ | ✅ |
-| `GET`/`PUT /api/clientes/:id` | ❌ | Solo el propio (`idCliente` del token) | ✅ (cualquiera) |
+| `GET`/`PUT /api/clientes/:id` | ❌ | Solo el propio (`idCliente` vigente de la cuenta) | ✅ (cualquiera) |
 | `GET /api/ventas`, `GET /api/ventas/:id` | ❌ | ✅ (solo las propias) | ✅ (cualquiera) |
 | `POST /api/ventas`, `PATCH /api/ventas/:id/cancelar`, `PATCH /api/ventas/:id/enviar` | ❌ | ❌ | ✅ |
 | `POST /api/solicitudes-cancelacion` | ❌ | ✅ (solo sobre las propias) | ❌ |
@@ -302,9 +307,11 @@ en [casos-de-uso.md](casos-de-uso.md).
 ## Usuarios de prueba
 
 `backend/scripts/sembrarDatosDemo.js` (`npm run sembrar:demo`) crea tres
-cuentas de desarrollo con contraseñas ficticias, impresas en la consola al
-ejecutarlo — **no son credenciales reales** y no se versionan en ningún
-archivo:
+cuentas de desarrollo. Sus contraseñas se configuran localmente con
+`SEED_ADMIN_PASSWORD`, `SEED_VENDEDOR_PASSWORD` y `SEED_CLIENTE_PASSWORD`
+en `backend/.env`; el script no las imprime, no incluye valores
+predeterminados y no se ejecuta en producción. Si las cuentas ya existen,
+volver a ejecutar el seed no cambia sus contraseñas:
 
 - `admin@petshop.demo` (administrador)
 - `vendedor@petshop.demo` (vendedor)
